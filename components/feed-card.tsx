@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ListeningItem } from "@/data/library";
+import type { PublishedItem } from "@/lib/feed-types";
 import { mediaUrl } from "@/lib/media";
 
 const REVEAL_RATIO = 0.68;
@@ -10,7 +10,7 @@ export function FeedCard({
   item,
   isActive,
 }: {
-  item: ListeningItem;
+  item: PublishedItem;
   isActive: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);

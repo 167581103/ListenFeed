@@ -35,6 +35,17 @@ body {
   display: none;
 }
 
+.feed-status {
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+
 .slide {
   height: 100svh;
   scroll-snap-align: start;
