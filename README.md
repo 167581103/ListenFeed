@@ -89,11 +89,57 @@ Feed 里同时存在多张卡片，只有真正播放的那条才传字节。进
 
 匿名答题状态只存在客户端。需要分析时用抽样或按会话聚合后批量写入，避免把 Neon 写入配额和函数调用耗在埋点上。
 
-## 信息流算法
+## Feed 发布契约(读写解耦)
 
-`lib/feed-algorithm.ts` 按页产出条目。当前实现从库中无限循环取，每走完一轮轮转起始位置，避免顺序完全重复。滚动接近末尾时自动追加下一页。
+前台**不查数据库、不进代码包读内容**。内容以**分页静态快照**的形式发布到 R2/CDN,前台运行时按需拉取。这套契约是内容管线(Neon + 内容工厂)与静态前台之间**唯一的耦合点**(CQRS 读写分离思路:Neon 是写模型,静态快照是为读优化的物化视图)。
 
-`IntersectionObserver` 保证同时只有当前可见的那条在播放。
+```text
+feed/latest.json            # 小指针,短缓存 + SWR:{ latestPage, count, maxSeq, ... }
+feed/page-00000.json        # 整页不可变(长缓存);最后一页未满时短缓存
+feed/page-00001.json        # 只追加,历史页永不变 → CDN 可永久缓存
+```
+
+发布任务(`npm run feed:publish`,见 `scripts/publish-feed.ts`):
+- 数据源是 **Neon**:读 `feed_items`(`status='published'`)按 `published_seq` 升序,`audio` 键由 `content_hash` 推导(R2 内容寻址布局)。需要 `DATABASE_URL`。
+- `published_seq` 在**首次发布时**分配(全局单调、只增),据此分页 → 历史页不可变。
+- **先写完所有页、最后才更新 `latest.json` 指针**,保证前台任何时刻读到的都是完整状态;并记一条 `publish_snapshots`。
+
+```bash
+npm run feed:publish                      # 发布到 R2
+npm run feed:publish -- --page-size 20    # 指定分页大小
+npm run feed:publish -- --out .feed-out   # 只写本地,不上传(便于检查)
+npm run feed:publish -- --dry-run
+```
+
+> **互不干扰**:内容工厂只写 Neon + R2,前台只读 CDN;后台狂塞不压前台,加内容也**不需要重新部署前端**。未来可加一个独立的"导入接口"服务(内容工厂调用它写 Neon/上传 R2、触发发布任务),前台完全无感。
+
+## 内容管线(CMS 工具箱)
+
+内容的权威源是 **Neon**;写路径工具箱在 `scripts/cms/` 下(仅 ops/CLI,**绝不进前端包**,凭据 `DATABASE_URL` + R2 只在服务端)。你的内容工厂(独立项目)直接调这些 CLI 或 `import` 这些函数,不需要部署任何 HTTP 服务。schema 见 `database/001_initial_schema.sql` + `database/002_content_pipeline.sql`,状态机 `generated → draft → reviewing → published → archived`。
+
+```bash
+npm run db:migrate                                   # 幂等迁移(建表/加列)
+npm run content:import -- --file items.json          # 批量导入为草稿(见下)
+npm run content:import -- --from-library             # 从 data/library.ts 迁移种子
+npm run content:approve -- --external-id <id>        # 审核发布(治理闸口;分配 published_seq)
+npm run content:approve -- --all-drafts
+npm run feed:publish                                 # Neon(published) → R2 静态快照
+```
+
+导入项契约(`ImportItem`,见 `scripts/cms/validate.ts`):`externalId`(**幂等键**)、`question`、`options`、`answerId`、`transcript?`,音频三选一——`masterPath`(本地母带,自动 `ffmpeg` 转码 + 上传 R2)/ `audioContentHash`(引用已上传的 `audio/{hash}/...`)/ `audio:{webm,mp3}`(显式键);可选 `level/topic/...` 等特征。导入是**幂等的**(按 `external_id` upsert,重复导入只更新、不重复),并生成 `import_job` + 逐条 `import_job_item`(结果含总数/成功/失败/原因/是否可重试);每次变更写 `audit_logs`,并存 `content_versions` 版本快照。
+
+> 治理:Agent/内容工厂只能创建/更新**草稿**;`content:approve`(发布)是人工闸口(对应 `audit_logs` 里的 `publish`)。`tags / feed_item_tags / generation_runs` 等表已建好,供后续标签召回与 Agentic 溯源使用。
+
+## 前台选片 / 去重(客户端)
+
+前台运行时从 CDN 拉分页(`lib/feed-source.ts`),用 `localStorage` 记录"看过哪些"(`lib/seen-store.ts`),再由纯函数 `lib/feed-select.ts` 决定下一条(`lib/use-feed.ts` 负责编排缓冲与轮询):
+
+- **未看优先**:一轮内不重复;最新内容(高 `seq`)优先冒头。
+- **刷完一轮**:按"最久没看"回放,且跳过最近几条,避免连续重播。
+- 定时轮询 `latest.json`,内容工厂新发布的内容会自动出现,无需重新部署。
+- `IntersectionObserver` 保证同时只有当前可见的那条在播放。
+
+排序目前是"新鲜度优先"的规则实现(在 `feed-select.ts` 里,便于替换);后续接入行为数据后可在此做本地个性化重排,或(有账号时)由边缘函数返回个性化 id 列表,载荷仍走静态 CDN。
 
 ## 本地开发
 
@@ -102,19 +148,19 @@ npm install
 npm run dev
 ```
 
+前台内容来自 R2 快照:设置 `NEXT_PUBLIC_MEDIA_BASE_URL`(公开媒体基址);要有内容需先建库并发布一次(需 `DATABASE_URL`):`npm run db:migrate` → `npm run content:import -- --from-library` → `npm run content:approve -- --all-drafts` → `npm run feed:publish`(或 `feed:publish -- --out .feed-out` 写本地自行托管)。测试:`npm test`(选片 + 导入校验单测,不需数据库)。
+
 生产构建（静态输出在 `out/`）：
 
 ```bash
 npm run build
 ```
 
-## 新增音频
+## 新增内容
 
-1. 用 `scripts/encode-audio.sh` 从母带生成两种编码（Opus/MP3），记下 `duration_ms`。
-2. 上传到 R2（见下方「R2 媒体运维」），拿到内容哈希对应的对象键。
-3. 在 `data/library.ts` 追加一条，`audio.webm`/`audio.mp3` 填 R2 相对键（如 `/audio/<hash>/speech.webm`），再补 `durationMs`、题目、选项、答案和逐句文本。
+走内容管线(见上「内容管线(CMS 工具箱)」):写一个 `ImportItem`(音频用 `masterPath` 让工具箱转码上传,或引用已上传的 `audioContentHash`)→ `content:import` 建草稿 → `content:approve` 发布 → `feed:publish` 生成快照。前台会在轮询到新 `latest.json` 后自动刷到,无需重新部署。
 
-信息流会自动把新条目纳入循环。进入阶段三后，这份库数据改由 Neon 内容表在发布时生成。
+`data/library.ts` 现在只作为**种子夹具**(`content:import --from-library` 一次性迁移历史内容);新内容不再往它里加。
 
 ## R2 媒体运维
 

@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { getFeedPage, type FeedEntry } from "@/lib/feed-algorithm";
+import { useEffect, useRef } from "react";
+import { useFeed } from "@/lib/use-feed";
 import { FeedCard } from "./feed-card";
 
 export function Feed() {
-  const [entries, setEntries] = useState<FeedEntry[]>(() => getFeedPage(0));
-  const [activeKey, setActiveKey] = useState(() => getFeedPage(0)[0].key);
+  const { entries, activeKey, ready, error, registerActive } = useFeed();
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const pageRef = useRef(0);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -18,21 +16,30 @@ export function Feed() {
       (records) => {
         const active = records.find((record) => record.isIntersecting);
         const key = (active?.target as HTMLElement | undefined)?.dataset.key;
-        if (key) setActiveKey(key);
+        if (key) registerActive(key);
       },
       { root: scroller, threshold: 0.6 },
     );
 
     scroller.querySelectorAll("[data-key]").forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [entries]);
+  }, [entries, registerActive]);
 
-  useEffect(() => {
-    const index = entries.findIndex((entry) => entry.key === activeKey);
-    if (index < entries.length - 3) return;
-    pageRef.current += 1;
-    setEntries((current) => [...current, ...getFeedPage(pageRef.current)]);
-  }, [activeKey, entries]);
+  if (error) {
+    return (
+      <div className="feed-status">
+        <p>加载 Feed 失败：{error}</p>
+      </div>
+    );
+  }
+
+  if (!ready && entries.length === 0) {
+    return (
+      <div className="feed-status">
+        <p>正在加载…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="feed" ref={scrollerRef}>
