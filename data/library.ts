@@ -3,9 +3,19 @@ export type ListeningOption = {
   label: string;
 };
 
+/**
+ * Two encodings of the same speech: Opus is roughly half the bytes, MP3 covers
+ * the browsers that will not decode Opus. Filenames carry a content hash so the
+ * CDN can serve them as immutable.
+ */
+export type ListeningAudio = {
+  webm: string;
+  mp3: string;
+};
+
 export type ListeningItem = {
   id: string;
-  audioUrl: string;
+  audio: ListeningAudio;
   durationMs: number;
   question: string;
   options: ListeningOption[];
@@ -16,7 +26,10 @@ export type ListeningItem = {
 export const library: ListeningItem[] = [
   {
     id: "coffee-shop-order-001",
-    audioUrl: "/audio/coffee-shop-en.mp3",
+    audio: {
+      webm: "/audio/coffee-shop-en.6bba2a1a.webm",
+      mp3: "/audio/coffee-shop-en.f5358909.mp3",
+    },
     durationMs: 45216,
     question: "What does Alex order?",
     options: [

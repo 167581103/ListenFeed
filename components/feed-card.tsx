@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ListeningItem } from "@/data/library";
+import { mediaUrl } from "@/lib/media";
 
 const REVEAL_RATIO = 0.68;
 
@@ -120,7 +121,6 @@ export function FeedCard({
 
       <audio
         ref={audioRef}
-        src={item.audioUrl}
         autoPlay={isActive}
         preload="none"
         onTimeUpdate={(event) => {
@@ -131,7 +131,10 @@ export function FeedCard({
           if (ratio >= REVEAL_RATIO) setRevealed(true);
         }}
         onEnded={() => setRevealed(true)}
-      />
+      >
+        <source src={mediaUrl(item.audio.webm)} type="audio/webm; codecs=opus" />
+        <source src={mediaUrl(item.audio.mp3)} type="audio/mpeg" />
+      </audio>
     </article>
   );
 }
