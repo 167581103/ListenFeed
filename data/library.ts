@@ -1,30 +1,23 @@
-export type FeedOption = {
+export type ListeningOption = {
   id: string;
   label: string;
 };
 
-export type FeedItem = {
+export type ListeningItem = {
   id: string;
-  eyebrow: string;
-  title: string;
-  level: string;
-  duration: string;
   audioUrl: string;
+  durationMs: number;
   question: string;
-  options: FeedOption[];
+  options: ListeningOption[];
   answerId: string;
-  explanation: string;
   transcript: { speaker: string; line: string }[];
 };
 
-export const feedItems: FeedItem[] = [
+export const library: ListeningItem[] = [
   {
     id: "coffee-shop-order-001",
-    eyebrow: "EVERYDAY ENGLISH · 01",
-    title: "Coffee run",
-    level: "B1",
-    duration: "0:45",
     audioUrl: "/audio/coffee-shop-en.mp3",
+    durationMs: 45216,
     question: "What does Alex order?",
     options: [
       { id: "a", label: "A medium oat latte with an extra shot and a muffin" },
@@ -33,8 +26,6 @@ export const feedItems: FeedItem[] = [
       { id: "d", label: "An oat latte and two blueberry muffins" },
     ],
     answerId: "a",
-    explanation:
-      "Alex asks for a medium oat milk latte, adds an extra shot, then decides to get one blueberry muffin.",
     transcript: [
       { speaker: "Barista", line: "Hey, welcome in! What can I get for you today?" },
       {

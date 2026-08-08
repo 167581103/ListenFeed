@@ -1,9 +1,1 @@
-{
-  "name": "ListenFeed",
-  "short_name": "ListenFeed",
-  "description": "Swipe, listen, and learn English.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#f3efe7",
-  "theme_color": "#f3efe7"
-}
+{"name":"ListenFeed","short_name":"ListenFeed","description":"An endless feed of English listening questions.","start_url":"/","display":"standalone","background_color":"#ffffff","theme_color":"#ffffff"}
