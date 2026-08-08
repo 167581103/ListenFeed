@@ -17,7 +17,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { library } from "../data/library";
 import {
   feedLatestKey,
   feedPageKey,
@@ -25,6 +24,7 @@ import {
   type FeedPage,
   type PublishedItem,
 } from "../lib/feed-types";
+import { getPool, query, closePool } from "./cms/db.js";
 // r2-client is plain ESM JS shared with the other ops scripts.
 // @ts-expect-error - no types for the .mjs helper; shapes are documented inline.
 import { createR2Client, loadR2Config } from "./r2-client.mjs";
@@ -49,23 +49,75 @@ function parseArgs(argv: string[]): Args {
   return args;
 }
 
+type Row = {
+  id: string;
+  seq: string;
+  version: number;
+  question: string;
+  content_hash: string;
+  duration_ms: number;
+  answer_id: string | null;
+  options: PublishedItem["options"] | null;
+  transcript: PublishedItem["transcript"] | null;
+  level: string | null;
+  language: string | null;
+  locale: string | null;
+  accent: string | null;
+  topic: string | null;
+  scenario: string | null;
+  format: string | null;
+  speech_rate: number | null;
+  quality_score: string | null;
+  freshness_score: string | null;
+};
+
 /**
- * The one function to replace when moving to Neon. Must return published items
- * in a STABLE order (append-only): index defines the global `seq`, so existing
- * items must never be reordered — only appended.
+ * Load published items from Neon in stable global publish order (published_seq).
+ * Audio keys are derived from the content hash (the R2 content-addressed layout).
  */
 async function loadPublishedItems(): Promise<PublishedItem[]> {
-  return library.map((it, index) => ({
-    id: it.id,
-    seq: index + 1,
-    version: 1,
-    question: it.question,
-    options: it.options,
-    answerId: it.answerId,
-    transcript: it.transcript,
-    durationMs: it.durationMs,
-    audio: it.audio,
-    features: {},
+  getPool();
+  const res = await query<Row>(
+    `SELECT fi.external_id AS id, fi.published_seq AS seq, fi.content_version AS version,
+            fi.question, aa.content_hash, aa.duration_ms,
+            fi.level, fi.language, fi.locale, fi.accent, fi.topic, fi.scenario, fi.format,
+            fi.speech_rate, fi.quality_score, fi.freshness_score,
+            (SELECT json_agg(json_build_object('id', o.option_key, 'label', o.label) ORDER BY o.position)
+               FROM feed_options o WHERE o.feed_item_id = fi.id) AS options,
+            (SELECT o.option_key FROM feed_options o WHERE o.feed_item_id = fi.id AND o.is_correct LIMIT 1) AS answer_id,
+            (SELECT json_agg(json_build_object('speaker', t.speaker_label, 'line', t.line) ORDER BY t.position)
+               FROM transcript_lines t WHERE t.feed_item_id = fi.id) AS transcript
+       FROM feed_items fi
+       JOIN audio_assets aa ON aa.id = fi.audio_asset_id
+      WHERE fi.status = 'published' AND fi.published_seq IS NOT NULL
+      ORDER BY fi.published_seq ASC`,
+  );
+
+  return res.rows.map((r) => ({
+    id: r.id,
+    seq: Number(r.seq),
+    version: r.version,
+    question: r.question,
+    options: r.options ?? [],
+    answerId: r.answer_id ?? "",
+    transcript: r.transcript ?? [],
+    durationMs: r.duration_ms,
+    audio: {
+      webm: `/audio/${r.content_hash}/speech.webm`,
+      mp3: `/audio/${r.content_hash}/speech.mp3`,
+    },
+    features: {
+      level: r.level ?? undefined,
+      language: r.language ?? undefined,
+      locale: r.locale ?? undefined,
+      accent: r.accent ?? undefined,
+      topic: r.topic ?? undefined,
+      scenario: r.scenario ?? undefined,
+      format: (r.format as "dialogue" | "monologue" | null) ?? undefined,
+      speechRate: r.speech_rate ?? undefined,
+      qualityScore: r.quality_score != null ? Number(r.quality_score) : undefined,
+      freshnessScore: r.freshness_score != null ? Number(r.freshness_score) : undefined,
+    },
   }));
 }
 
@@ -135,10 +187,19 @@ async function main() {
     );
     console.log(`PUT ${u.sealed ? "immutable" : "short    "} ${u.key} (${u.body.length}B)`);
   }
+
+  await query(
+    `INSERT INTO publish_snapshots (catalog_version, page_count, item_count, max_seq, storage_prefix)
+     VALUES ($1,$2,$3,$4,'feed')`,
+    [args.catalogVersion, pages.length, count, latest.maxSeq],
+  );
   console.log(`\nPublished ${count} item(s) to R2 feed/ (latest pointer written last).`);
 }
 
-main().catch((err) => {
-  console.error(`publish-feed failed: ${err instanceof Error ? err.message : err}`);
-  process.exit(1);
-});
+main()
+  .then(closePool)
+  .catch(async (err) => {
+    console.error(`publish-feed failed: ${err instanceof Error ? err.message : err}`);
+    await closePool();
+    process.exit(1);
+  });
