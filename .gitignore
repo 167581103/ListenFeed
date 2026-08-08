@@ -1,0 +1,17 @@
+# dependencies
+/node_modules
+
+# Next.js
+/.next/
+/out/
+
+# local env and platform metadata
+.env*
+!.env.example
+.vercel
+.neon
+
+# tooling
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
