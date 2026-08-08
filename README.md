@@ -89,11 +89,40 @@ Feed 里同时存在多张卡片，只有真正播放的那条才传字节。进
 
 匿名答题状态只存在客户端。需要分析时用抽样或按会话聚合后批量写入，避免把 Neon 写入配额和函数调用耗在埋点上。
 
-## 信息流算法
+## Feed 发布契约(读写解耦)
 
-`lib/feed-algorithm.ts` 按页产出条目。当前实现从库中无限循环取，每走完一轮轮转起始位置，避免顺序完全重复。滚动接近末尾时自动追加下一页。
+前台**不查数据库、不进代码包读内容**。内容以**分页静态快照**的形式发布到 R2/CDN,前台运行时按需拉取。这套契约是内容管线(Neon + 内容工厂)与静态前台之间**唯一的耦合点**(CQRS 读写分离思路:Neon 是写模型,静态快照是为读优化的物化视图)。
 
-`IntersectionObserver` 保证同时只有当前可见的那条在播放。
+```text
+feed/latest.json            # 小指针,短缓存 + SWR:{ latestPage, count, maxSeq, ... }
+feed/page-00000.json        # 整页不可变(长缓存);最后一页未满时短缓存
+feed/page-00001.json        # 只追加,历史页永不变 → CDN 可永久缓存
+```
+
+发布任务(`npm run feed:publish`,见 `scripts/publish-feed.ts`):
+- 数据源**可插拔**——现在读 `data/library.ts`,以后把 `loadPublishedItems()` 换成读 Neon `feed_items`(`status='published'`)即可,契约与前台都不用改。
+- 按稳定顺序分配全局 `seq`(只追加,不重排),据此分页 → 历史页不可变。
+- **先写完所有页、最后才更新 `latest.json` 指针**,保证前台任何时刻读到的都是完整状态。
+
+```bash
+npm run feed:publish                      # 发布到 R2
+npm run feed:publish -- --page-size 20    # 指定分页大小
+npm run feed:publish -- --out .feed-out   # 只写本地,不上传(便于检查)
+npm run feed:publish -- --dry-run
+```
+
+> **互不干扰**:内容工厂只写 Neon + R2,前台只读 CDN;后台狂塞不压前台,加内容也**不需要重新部署前端**。未来可加一个独立的"导入接口"服务(内容工厂调用它写 Neon/上传 R2、触发发布任务),前台完全无感。
+
+## 前台选片 / 去重(客户端)
+
+前台运行时从 CDN 拉分页(`lib/feed-source.ts`),用 `localStorage` 记录"看过哪些"(`lib/seen-store.ts`),再由纯函数 `lib/feed-select.ts` 决定下一条(`lib/use-feed.ts` 负责编排缓冲与轮询):
+
+- **未看优先**:一轮内不重复;最新内容(高 `seq`)优先冒头。
+- **刷完一轮**:按"最久没看"回放,且跳过最近几条,避免连续重播。
+- 定时轮询 `latest.json`,内容工厂新发布的内容会自动出现,无需重新部署。
+- `IntersectionObserver` 保证同时只有当前可见的那条在播放。
+
+排序目前是"新鲜度优先"的规则实现(在 `feed-select.ts` 里,便于替换);后续接入行为数据后可在此做本地个性化重排,或(有账号时)由边缘函数返回个性化 id 列表,载荷仍走静态 CDN。
 
 ## 本地开发
 
@@ -101,6 +130,8 @@ Feed 里同时存在多张卡片，只有真正播放的那条才传字节。进
 npm install
 npm run dev
 ```
+
+前台内容来自 R2 快照,所以本地需要:设置 `NEXT_PUBLIC_MEDIA_BASE_URL`(公开媒体基址),并先跑一次 `npm run feed:publish` 生成快照(或 `--out` 写本地自行托管)。测试:`npm test`(选片逻辑单测)。
 
 生产构建（静态输出在 `out/`）：
 
