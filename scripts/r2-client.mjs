@@ -4,14 +4,28 @@
 // credentials it reads stay on the server side and never reach the browser.
 import { S3Client } from "@aws-sdk/client-s3";
 
+// Only these are needed to sign uploads/reads. The public media base is a
+// separate, optional concept (browsers fetch from it) resolved below.
 const REQUIRED = [
   "R2_ACCOUNT_ID",
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
   "R2_BUCKET_MEDIA",
   "R2_BUCKET_MASTERS",
-  "R2_PUBLIC_BASE_URL",
 ];
+
+/**
+ * Resolve the PUBLIC base URL browsers use to fetch optimized media. This is NOT
+ * the S3 API endpoint. Prefer an explicit public value; fall back to
+ * R2_PUBLIC_BASE_URL only if it is clearly not the S3 endpoint.
+ */
+function resolvePublicBaseUrl() {
+  const explicit = process.env.NEXT_PUBLIC_MEDIA_BASE_URL || process.env.R2_PUBLIC_MEDIA_URL;
+  if (explicit) return explicit.replace(/\/$/, "");
+  const legacy = process.env.R2_PUBLIC_BASE_URL ?? "";
+  if (legacy && !legacy.includes(".r2.cloudflarestorage.com")) return legacy.replace(/\/$/, "");
+  return "";
+}
 
 export function loadR2Config() {
   const missing = REQUIRED.filter((key) => !process.env[key]);
@@ -28,8 +42,9 @@ export function loadR2Config() {
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
     mediaBucket: process.env.R2_BUCKET_MEDIA,
     mastersBucket: process.env.R2_BUCKET_MASTERS,
-    // Public CDN base for the optimized media bucket (e.g. media.listenfeed.online).
-    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, ""),
+    // Public CDN base for the optimized media bucket (e.g. media.listenfeed.online
+    // or a pub-*.r2.dev URL). Empty until public access is configured.
+    publicBaseUrl: resolvePublicBaseUrl(),
   };
 }
 
@@ -47,5 +62,9 @@ export function createR2Client(config = loadR2Config()) {
 
 /** Absolute, browser-facing URL for an object key in the public media bucket. */
 export function publicUrl(config, key) {
-  return `${config.publicBaseUrl}/${key.replace(/^\//, "")}`;
+  const relative = `/${key.replace(/^\//, "")}`;
+  if (!config.publicBaseUrl) {
+    return `${relative}  (set NEXT_PUBLIC_MEDIA_BASE_URL to a public base)`;
+  }
+  return `${config.publicBaseUrl}${relative}`;
 }
