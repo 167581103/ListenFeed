@@ -117,7 +117,22 @@ function FeedCard({ item }: { item: FeedItem }) {
               )}
             </button>
             <div className="wave-area">
-              <div className="waveform" onClick={seek} role="slider" aria-label="Audio progress">
+              <div
+                className="waveform"
+                onClick={seek}
+                role="slider"
+                aria-label="Audio progress"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress)}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  const audio = audioRef.current;
+                  if (!audio) return;
+                  if (event.key === "ArrowRight") audio.currentTime += 5;
+                  if (event.key === "ArrowLeft") audio.currentTime -= 5;
+                }}
+              >
                 <div className="wave-progress" style={{ width: `${progress}%` }} />
                 {bars.map((height, index) => (
                   <i key={index} style={{ height }} />
