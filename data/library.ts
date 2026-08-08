@@ -27,8 +27,8 @@ export const library: ListeningItem[] = [
   {
     id: "coffee-shop-order-001",
     audio: {
-      webm: "/audio/coffee-shop-en.6bba2a1a.webm",
-      mp3: "/audio/coffee-shop-en.f5358909.mp3",
+      webm: "/audio/2e07602d5e67a68b/speech.webm",
+      mp3: "/audio/2e07602d5e67a68b/speech.mp3",
     },
     durationMs: 45216,
     question: "What does Alex order?",

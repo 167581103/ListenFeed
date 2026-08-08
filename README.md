@@ -110,7 +110,34 @@ npm run build
 
 ## 新增音频
 
-1. 用 `scripts/encode-audio.sh` 生成两种编码，记下输出的文件名和 `duration_ms`。
-2. 在 `data/library.ts` 追加一条，填入 `audio.webm`、`audio.mp3`、`durationMs`、题目、选项、答案和逐句文本。
+1. 用 `scripts/encode-audio.sh` 从母带生成两种编码（Opus/MP3），记下 `duration_ms`。
+2. 上传到 R2（见下方「R2 媒体运维」），拿到内容哈希对应的对象键。
+3. 在 `data/library.ts` 追加一条，`audio.webm`/`audio.mp3` 填 R2 相对键（如 `/audio/<hash>/speech.webm`），再补 `durationMs`、题目、选项、答案和逐句文本。
 
 信息流会自动把新条目纳入循环。进入阶段三后，这份库数据改由 Neon 内容表在发布时生成。
+
+## R2 媒体运维
+
+音频走两桶：`R2_BUCKET_MASTERS`（私有，原始母带）与 `R2_BUCKET_MEDIA`（公开，优化后的 Opus/MP3）。对象采用内容寻址布局：
+
+```text
+audio/{content_hash}/master.wav   # 私有母带
+audio/{content_hash}/speech.webm  # 公开 Opus
+audio/{content_hash}/speech.mp3   # 公开 MP3
+```
+
+运维脚本（凭据来自环境变量 / Cloud Agents Secrets，**绝不入库**，见 `.env.example`）：
+
+```bash
+# 上传一条音频（幂等；公开对象带一年 immutable 缓存）
+npm run media:upload -- --slug <slug> --webm <file.webm> --mp3 <file.mp3> [--master <file.wav>]
+
+# 为公开媒体桶配置 CORS（允许 app 各来源的 GET/HEAD 与 range 请求）
+node scripts/configure-cors.mjs
+```
+
+> **公开 URL 与 S3 端点的区别**：`R2_PUBLIC_BASE_URL` 是 SDK 用于**签名读写**的 S3 端点
+> （`https://<account>.r2.cloudflarestorage.com`），**不可**直接公开访问。浏览器播放需要一个
+> **公开** 基址——桶的 `https://pub-XXXX.r2.dev` 或自定义域 `https://media.listenfeed.online`——
+> 并将其设为 Vercel 的 `NEXT_PUBLIC_MEDIA_BASE_URL`。`lib/media.ts` 会把库里的相对键拼成绝对 URL，
+> 库数据与组件代码都无需改动。
