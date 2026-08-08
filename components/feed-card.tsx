@@ -16,15 +16,29 @@ export function FeedCard({
   const [progress, setProgress] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [choice, setChoice] = useState<string | null>(null);
-  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     if (isActive) {
-      audio.play().catch(() => setBlocked(true));
-      return;
+      const play = () => {
+        void audio.play().catch(() => {
+          // Browsers may block audible autoplay until the first user gesture.
+          // The feed stays interruption-free and retries on natural interaction.
+        });
+      };
+
+      play();
+      window.addEventListener("pointerdown", play, { once: true });
+      window.addEventListener("touchend", play, { once: true });
+      window.addEventListener("keydown", play, { once: true });
+
+      return () => {
+        window.removeEventListener("pointerdown", play);
+        window.removeEventListener("touchend", play);
+        window.removeEventListener("keydown", play);
+      };
     }
 
     audio.pause();
@@ -34,8 +48,7 @@ export function FeedCard({
   const start = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    setBlocked(false);
-    audio.play().catch(() => setBlocked(true));
+    void audio.play();
   };
 
   const replay = () => {
@@ -46,7 +59,7 @@ export function FeedCard({
   };
 
   return (
-    <article className="card" onClick={blocked ? start : undefined}>
+    <article className="card">
       <div className="card-inner">
         <h2 className="question">{item.question}</h2>
 
@@ -76,8 +89,6 @@ export function FeedCard({
             </svg>
           </button>
         </div>
-
-        {blocked && <p className="blocked">Tap to listen</p>}
 
         <ul className={`options${revealed ? " revealed" : ""}`}>
           {item.options.map((option, index) => {
@@ -110,6 +121,7 @@ export function FeedCard({
       <audio
         ref={audioRef}
         src={item.audioUrl}
+        autoPlay={isActive}
         preload="none"
         onTimeUpdate={(event) => {
           const audio = event.currentTarget;
