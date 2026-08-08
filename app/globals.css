@@ -1,0 +1,155 @@
+:root {
+  --paper: #fff;
+  --ink: #000;
+  --muted: #9a9a9a;
+  --line: #e8e8e8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.feed {
+  height: 100svh;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.feed::-webkit-scrollbar {
+  display: none;
+}
+
+.slide {
+  height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.card {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.card-inner {
+  width: 100%;
+  max-width: 480px;
+}
+
+.question {
+  margin: 0;
+  font-size: clamp(29px, 7.6vw, 42px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.14;
+  text-wrap: balance;
+}
+
+.audio {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.track {
+  height: 2px;
+  flex: 1;
+  background: var(--line);
+}
+
+.track span {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transition: width 0.2s linear;
+}
+
+.replay {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.options {
+  margin: 34px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+  list-style: none;
+}
+
+.options li {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.options.revealed li {
+  opacity: 1;
+  transform: none;
+}
+
+.option {
+  width: 100%;
+  padding: 15px 17px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.option:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.option:disabled {
+  cursor: default;
+}
+
+.option.right {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.option.missed {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.option.dim {
+  opacity: 0.32;
+}
