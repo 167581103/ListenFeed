@@ -49,14 +49,21 @@ export function pickNext(
   const byLeastRecent = (a: PublishedItem, b: PublishedItem) =>
     (seen[a.id]?.t ?? 0) - (seen[b.id]?.t ?? 0);
 
+  // Prefer items neither still queued in the buffer nor shown very recently.
   const preferred = pool
     .filter((i) => !queued.has(i.id) && !recentSet.has(i.id))
     .sort(byLeastRecent);
   if (preferred.length > 0) return { kind: "item", item: preferred[0], cycle: true };
 
-  // Fallback: pool smaller than the avoid window; still take least-recently-seen.
-  const any = pool.filter((i) => !queued.has(i.id)).sort(byLeastRecent);
-  if (any.length > 0) return { kind: "item", item: any[0], cycle: true };
+  // Then allow items already queued in the buffer, but still avoid the ones shown
+  // most recently (keeps larger libraries from repeating back-to-back).
+  const notRecent = pool.filter((i) => !recentSet.has(i.id)).sort(byLeastRecent);
+  if (notRecent.length > 0) return { kind: "item", item: notRecent[0], cycle: true };
+
+  // Last resort (e.g. a single-item library): repeat the least-recently-seen so
+  // the feed always stays scrollable, even if that means a back-to-back repeat.
+  const anyItem = [...pool].sort(byLeastRecent);
+  if (anyItem.length > 0) return { kind: "item", item: anyItem[0], cycle: true };
 
   return { kind: "none" };
 }
