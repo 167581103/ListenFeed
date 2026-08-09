@@ -80,8 +80,13 @@ export function useFeed() {
       upcomingRef.current.add(res.item.id);
       setEntries((cur) => [...cur, { key, item: res.item, cycle: res.cycle }]);
       // Seed the first active slide here (not in an effect) so autoplay can start
-      // before the IntersectionObserver's initial callback fires.
-      if (pos === 0) setActiveKey(key);
+      // on load. Activation otherwise only happens once a scroll settles, so mark
+      // the first item seen here too (it is shown immediately).
+      if (pos === 0) {
+        setActiveKey(key);
+        seenRef.current = markSeen(seenRef.current, res.item.id);
+        recentRef.current = [...recentRef.current, res.item.id].slice(-20);
+      }
       return "added";
     }
     return res.kind === "need-more" ? "need-more" : "none";
