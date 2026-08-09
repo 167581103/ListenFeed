@@ -98,27 +98,30 @@ export function useFeed() {
       busyRef.current = true;
       try {
         let guard = 0;
+        // Track length locally: setEntries is async, so entriesLenRef doesn't
+        // update within this synchronous loop.
+        let len = entriesLenRef.current;
         // Keep BUFFER_AHEAD entries after the active one.
         while (guard++ < 50) {
-          const remaining = entriesLenRef.current - 1 - activeIndex;
-          if (remaining >= BUFFER_AHEAD) break;
+          if (len - 1 - activeIndex >= BUFFER_AHEAD) break;
           const outcome = appendOne();
-          if (outcome === "added") continue;
+          if (outcome === "added") {
+            len += 1;
+            continue;
+          }
           if (outcome === "need-more") {
             const loaded = await loadNextPage();
             if (!loaded) break;
             continue;
           }
-          // Exhausted: try to discover newly published pages before cycling.
+          // Exhausted (pool empty): try to discover newly published pages.
           await refreshLatest();
           const latest = latestRef.current;
           if (latest && nextPageRef.current <= latest.latestPage) {
             await loadNextPage();
             continue;
           }
-          // Nothing new; appendOne will now enter cycle mode on the next call.
-          const cycled = appendOne();
-          if (cycled === "none") break;
+          break;
         }
       } finally {
         busyRef.current = false;
