@@ -61,6 +61,7 @@ export function FeedCard({
 
   return (
     <article className="card">
+      <span className="card-id" title={item.id}>#{item.seq}</span>
       <div className="card-inner">
         <h2 className="question">{item.question}</h2>
 
