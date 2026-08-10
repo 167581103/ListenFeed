@@ -7,12 +7,11 @@
 import { PutBucketCorsCommand, GetBucketCorsCommand } from "@aws-sdk/client-s3";
 import { createR2Client, loadR2Config } from "./r2-client.mjs";
 
-const ALLOWED_ORIGINS = [
-  "https://listenfeed.online",
-  "https://studio.listenfeed.online",
-  "https://listenfeed-tau.vercel.app",
-  "http://localhost:3000",
-];
+// The media bucket serves only PUBLIC content (audio + feed JSON) with no
+// credentials, and it's fetched from many origins (production, every unique
+// Vercel *.vercel.app preview URL, custom domains, localhost). Allow all origins
+// for GET/HEAD so cross-origin fetch() of the feed snapshots works everywhere.
+const ALLOWED_ORIGINS = ["*"];
 
 const corsRules = [
   {

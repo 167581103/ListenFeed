@@ -58,6 +58,18 @@ test("avoids replaying the most recently shown items back-to-back", () => {
   if (res.kind === "item") assert.equal(res.item.id, "a");
 });
 
+test("single-item library keeps cycling (stays scrollable) even when just shown", () => {
+  const one = [mk("solo", 1)];
+  const seen: SeenMap = { solo: { t: 100 } };
+  // Item is seen, in the buffer (queued) and the most recent — must still repeat.
+  const res = pickNext(one, seen, new Set(["solo"]), ["solo"], false);
+  assert.equal(res.kind, "item");
+  if (res.kind === "item") {
+    assert.equal(res.item.id, "solo");
+    assert.equal(res.cycle, true);
+  }
+});
+
 test("returns none for an empty pool", () => {
   const res = pickNext([], {}, new Set(), [], false);
   assert.equal(res.kind, "none");
