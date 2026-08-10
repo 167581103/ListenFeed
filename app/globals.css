@@ -53,11 +53,25 @@ body {
 }
 
 .card {
+  position: relative;
   display: flex;
   height: 100%;
   align-items: center;
   justify-content: center;
   padding: 28px;
+}
+
+/* Unique content id (global publish sequence) for support/troubleshooting.
+   Hover shows the full content slug (external_id). */
+.card-id {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  user-select: text;
 }
 
 .card-inner {
