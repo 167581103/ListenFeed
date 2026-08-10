@@ -11,6 +11,7 @@
     "db:migrate": "tsx scripts/cms/migrate.ts",
     "content:import": "tsx scripts/cms/import-cli.ts",
     "content:approve": "tsx scripts/cms/approve-cli.ts",
+    "content:reshuffle-options": "tsx scripts/cms/reshuffle-options.ts",
     "feed:publish": "tsx scripts/publish-feed.ts",
     "test": "node --import tsx --test tests/*.test.ts"
   },

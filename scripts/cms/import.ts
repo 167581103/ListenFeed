@@ -11,6 +11,7 @@ import {
   hashFromKey,
   mediaPublicBase,
 } from "./audio.js";
+import { shuffleWithSeed } from "../../lib/shuffle.js";
 
 export type ImportItemResult = {
   position: number;
@@ -138,8 +139,11 @@ async function importOneItem(item: ImportItem): Promise<{ status: "created" | "u
     }
 
     // Replace options (remap arbitrary ids to positional letter keys the schema expects).
+    // Shuffle first so content that always ships answer-first doesn't land as
+    // option_key "a" / position 0 for every item.
     await client.query("DELETE FROM feed_options WHERE feed_item_id=$1", [feedItemId]);
-    for (const [i, opt] of item.options.entries()) {
+    const options = shuffleWithSeed(item.options, item.externalId);
+    for (const [i, opt] of options.entries()) {
       await client.query(
         `INSERT INTO feed_options (feed_item_id, option_key, label, is_correct, position)
          VALUES ($1,$2,$3,$4,$5)`,

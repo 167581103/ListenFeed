@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PublishedItem } from "@/lib/feed-types";
 import { mediaUrl } from "@/lib/media";
+import { shuffleOptions } from "@/lib/shuffle-options";
 
 const REVEAL_RATIO = 0.68;
 
@@ -17,6 +18,9 @@ export function FeedCard({
   const [progress, setProgress] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [choice, setChoice] = useState<string | null>(null);
+  // Defense in depth: even if a snapshot still ships answer-first, display order
+  // is shuffled (stable per id/version so remounts don't reshuffle).
+  const options = shuffleOptions(item.options, item.id, item.version);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -93,7 +97,7 @@ export function FeedCard({
         </div>
 
         <ul className={`options${revealed ? " revealed" : ""}`}>
-          {item.options.map((option, index) => {
+          {options.map((option, index) => {
             const answered = choice !== null;
             const isAnswer = option.id === item.answerId;
             const state = !answered
