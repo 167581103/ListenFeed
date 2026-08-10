@@ -80,8 +80,13 @@ export function useFeed() {
       upcomingRef.current.add(res.item.id);
       setEntries((cur) => [...cur, { key, item: res.item, cycle: res.cycle }]);
       // Seed the first active slide here (not in an effect) so autoplay can start
-      // before the IntersectionObserver's initial callback fires.
-      if (pos === 0) setActiveKey(key);
+      // on load. Activation otherwise only happens once a scroll settles, so mark
+      // the first item seen here too (it is shown immediately).
+      if (pos === 0) {
+        setActiveKey(key);
+        seenRef.current = markSeen(seenRef.current, res.item.id);
+        recentRef.current = [...recentRef.current, res.item.id].slice(-20);
+      }
       return "added";
     }
     return res.kind === "need-more" ? "need-more" : "none";
@@ -93,27 +98,30 @@ export function useFeed() {
       busyRef.current = true;
       try {
         let guard = 0;
+        // Track length locally: setEntries is async, so entriesLenRef doesn't
+        // update within this synchronous loop.
+        let len = entriesLenRef.current;
         // Keep BUFFER_AHEAD entries after the active one.
         while (guard++ < 50) {
-          const remaining = entriesLenRef.current - 1 - activeIndex;
-          if (remaining >= BUFFER_AHEAD) break;
+          if (len - 1 - activeIndex >= BUFFER_AHEAD) break;
           const outcome = appendOne();
-          if (outcome === "added") continue;
+          if (outcome === "added") {
+            len += 1;
+            continue;
+          }
           if (outcome === "need-more") {
             const loaded = await loadNextPage();
             if (!loaded) break;
             continue;
           }
-          // Exhausted: try to discover newly published pages before cycling.
+          // Exhausted (pool empty): try to discover newly published pages.
           await refreshLatest();
           const latest = latestRef.current;
           if (latest && nextPageRef.current <= latest.latestPage) {
             await loadNextPage();
             continue;
           }
-          // Nothing new; appendOne will now enter cycle mode on the next call.
-          const cycled = appendOne();
-          if (cycled === "none") break;
+          break;
         }
       } finally {
         busyRef.current = false;
