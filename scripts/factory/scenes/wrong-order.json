@@ -1,0 +1,84 @@
+{
+  "externalId": "coffee-shop-wrong-milk-001",
+  "title": "Wrong milk, send it back",
+  "level": "B1",
+  "language": "en",
+  "locale": "en-US",
+  "accent": "american",
+  "topic": "food-and-drink",
+  "scenario": "coffee-shop-complaint",
+  "format": "dialogue",
+  "genre": "everyday spoken American English, a short conflict at the counter",
+  "setting": "the same neighborhood coffee shop, afternoon rush",
+  "mood": "polite but frustrated, then quickly resolved",
+  "bed": "Throughout: denser café chatter than the morning, milk steamer screaming in bursts, a grinder kicking on between lines. Dialogue stays intelligible over the noise.",
+  "speakers": [
+    {
+      "name": "Maya",
+      "voice": "young woman, American, clear and direct, holding back irritation, medium-fast"
+    },
+    {
+      "name": "Barista",
+      "voice": "young man, American, slightly flustered, apologetic, medium pace"
+    }
+  ],
+  "beats": [
+    {
+      "kind": "sfx",
+      "text": "A ceramic cup is set down on the wooden pickup counter."
+    },
+    {
+      "kind": "line",
+      "speaker": "Barista",
+      "direction": "calling out",
+      "text": "Oat latte for Maya?"
+    },
+    {
+      "kind": "line",
+      "speaker": "Maya",
+      "direction": "taking a sip, then stopping",
+      "text": "Wait — this isn't oat milk. This is regular."
+    },
+    {
+      "kind": "pause",
+      "text": "A beat. The steamer hisses hard, then cuts off."
+    },
+    {
+      "kind": "line",
+      "speaker": "Barista",
+      "direction": "caught, lowering his voice",
+      "text": "Oh no. I'm really sorry — we must've grabbed the whole milk pitcher. I can remake it right now."
+    },
+    {
+      "kind": "line",
+      "speaker": "Maya",
+      "direction": "firm but not yelling",
+      "text": "Yeah, please do. I'm actually dairy-free. I can't drink this."
+    },
+    {
+      "kind": "sfx",
+      "text": "He dumps the drink, pulls the oat carton, and the steamer starts again, shorter this time."
+    },
+    {
+      "kind": "line",
+      "speaker": "Barista",
+      "direction": "earnest",
+      "text": "Totally my fault. New cup, extra shot on the house. Two minutes."
+    },
+    {
+      "kind": "line",
+      "speaker": "Maya",
+      "direction": "exhaling, softer",
+      "text": "Okay. Thanks for fixing it."
+    }
+  ],
+  "closing": "The corrected cup lands on the counter with a light knock; the rush noise swallows the rest.",
+  "question": "Why does Maya send the drink back?",
+  "options": [
+    { "id": "a", "label": "It was made with regular milk instead of oat milk" },
+    { "id": "b", "label": "It was too cold and she wanted it reheated" },
+    { "id": "c", "label": "They gave her a cappuccino instead of a latte" },
+    { "id": "d", "label": "The extra shot was missing from the order" }
+  ],
+  "answerId": "a"
+}

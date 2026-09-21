@@ -1,0 +1,104 @@
+{
+  "externalId": "coffee-shop-order-seedaudio-001",
+  "title": "Coffee shop order",
+  "level": "A2",
+  "language": "en",
+  "locale": "en-US",
+  "accent": "american",
+  "topic": "food-and-drink",
+  "scenario": "coffee-shop",
+  "format": "dialogue",
+  "genre": "everyday spoken American English, a short real-life listening scene",
+  "setting": "a busy neighborhood coffee shop at mid-morning",
+  "mood": "warm, casual, slightly rushed but friendly",
+  "bed": "Throughout: low café murmur, a distant espresso machine hissing in short bursts, ceramic cups clinking on the bar, faint indie music under the voices. Keep the dialogue clearly in the foreground.",
+  "speakers": [
+    {
+      "name": "Barista",
+      "voice": "young woman, American, bright friendly barista voice, medium-fast, smiling"
+    },
+    {
+      "name": "Alex",
+      "voice": "young man, American, easygoing, a little hesitant, medium pace"
+    }
+  ],
+  "beats": [
+    {
+      "kind": "line",
+      "speaker": "Barista",
+      "direction": "calling out from behind the bar",
+      "text": "Hey, welcome in! What can I get for you today?"
+    },
+    {
+      "kind": "line",
+      "speaker": "Alex",
+      "direction": "thinking it over",
+      "text": "Hey! Uh, let me think..."
+    },
+    {
+      "kind": "pause",
+      "text": "A short pause — espresso steam hisses, then settles."
+    },
+    {
+      "kind": "line",
+      "speaker": "Alex",
+      "direction": "deciding",
+      "text": "I'll take a medium oat milk latte, please. And, uh, could you add an extra shot?"
+    },
+    {
+      "kind": "sfx",
+      "text": "The barista scribbles on a cup with a marker."
+    },
+    {
+      "kind": "line",
+      "speaker": "Barista",
+      "direction": "warm, confirming",
+      "text": "Medium oat milk latte, extra shot. You got it! Anything else? Maybe a pastry or somethin'?"
+    },
+    {
+      "kind": "line",
+      "speaker": "Alex",
+      "text": "Oh, actually yeah — you guys still have those blueberry muffins?"
+    },
+    {
+      "kind": "line",
+      "speaker": "Barista",
+      "direction": "pleased",
+      "text": "We sure do! Just came out of the oven like twenty minutes ago. You want one?"
+    },
+    {
+      "kind": "line",
+      "speaker": "Alex",
+      "text": "Yeah, toss one in. That's it for me."
+    },
+    {
+      "kind": "line",
+      "speaker": "Barista",
+      "text": "Alright, so that's a medium oat latte with an extra shot, and a blueberry muffin. That'll be eight seventy-five. Name for the order?"
+    },
+    {
+      "kind": "line",
+      "speaker": "Alex",
+      "text": "It's Alex. Here you go — tap."
+    },
+    {
+      "kind": "sfx",
+      "text": "Alex taps a card on the reader — a short electronic beep."
+    },
+    {
+      "kind": "line",
+      "speaker": "Barista",
+      "direction": "cheerful",
+      "text": "Awesome, Alex! Should be ready in just a few minutes. Have a good one!"
+    }
+  ],
+  "closing": "The café murmur carries the scene out as the ticket printer chatters.",
+  "question": "What does Alex order?",
+  "options": [
+    { "id": "a", "label": "A medium oat latte with an extra shot and a muffin" },
+    { "id": "b", "label": "A large black coffee and a blueberry scone" },
+    { "id": "c", "label": "A medium cappuccino with an extra shot" },
+    { "id": "d", "label": "An oat latte and two blueberry muffins" }
+  ],
+  "answerId": "a"
+}

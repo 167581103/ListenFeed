@@ -130,6 +130,44 @@ npm run feed:publish                                 # Neon(published) → R2 �
 
 > 治理:Agent/内容工厂只能创建/更新**草稿**;`content:approve`(发布)是人工闸口(对应 `audit_logs` 里的 `publish`)。`tags / feed_item_tags / generation_runs` 等表已建好,供后续标签召回与 Agentic 溯源使用。
 
+## 内容工厂：Seed Audio 1.0（不再需要导演棚）
+
+早期设想是一套演播室：**LLM 当编剧，CosyVoice 等 TTS 当演员，FFmpeg 当录音棚**，再按时间线叠咖啡机、键盘、底噪。那是「分轨导演」——人声和环境声是两套系统，停顿和场面调度要自己排。
+
+[Seed Audio 1.0](https://seed.bytedance.com/zh/seedaudio1_0) 把这件事收成一次生成。它在统一声学表征里联合建模对白、音效和环境声，一条 prompt 直接出成品音轨，而不是一堆等着混音的分轨。场景音、停顿、语气、进场时机都是模型自己排的，不再需要一层导演去指挥 TTS + mixer。
+
+对 ListenFeed 仍然成立的边界：
+
+- 单次大约 **2 分钟**，刚好覆盖一条听力题，不需要拼接长节目。
+- Prompt 按 **SCENE** 写：场景 / 连续底噪 / 角色声音 / 台词 / 少量音效与静默。不要把 prompt 写成 FFmpeg cue sheet。
+- 可选 `[5.5s:8.0s]` 时间码（约 100ms 精度）；不写就按自然口语节奏。
+- 最多 3 段参考音色（`@Audio1`…`@Audio3`），用于系列题里把 Barista / Alex 固定下来。
+- 多语种变体覆盖 20+ 语种；**提示词语言要和台词语言一致**。
+
+编剧还在，导演可以撤了。LLM 继续写情景、题目和干扰项；音频侧只把 `SceneSpec` 编成一条 T2A prompt，交给 Seed Audio。
+
+```text
+SceneSpec JSON  →  compile prompt  →  Seed Audio 1.0  →  master.mp3
+       →  content:import（转码 Opus/MP3、写入 Neon 草稿）
+       →  content:approve  →  feed:publish
+```
+
+```bash
+# 只看编译出的 prompt（不需要 API Key）
+npm run content:seedaudio -- --file scripts/factory/scenes/coffee-shop-order.json
+
+# 打印可直接跑的 fal.ai curl
+npm run content:seedaudio -- --file scripts/factory/scenes/coffee-shop-order.json --print-curl
+
+# 生成母带（需要 FAL_KEY 或 EVOLINK_API_KEY）
+npm run content:seedaudio -- --file scripts/factory/scenes/coffee-shop-order.json \
+  --out /tmp/coffee-shop.mp3 --emit-import /tmp/coffee-shop.import.json
+
+npm run content:import -- --file /tmp/coffee-shop.import.json
+```
+
+示例情景在 `scripts/factory/scenes/`：咖啡馆点单（原 CosyVoice 样题的全要素版）、点错牛奶要重做（冲突 + 蒸汽机）。底噪写在 `bed` 里，停顿和音效是 `pause` / `sfx` beat，**不会**再走 FFmpeg 分轨。
+
 ## 前台选片 / 去重(客户端)
 
 前台运行时从 CDN 拉分页(`lib/feed-source.ts`),用 `localStorage` 记录"看过哪些"(`lib/seen-store.ts`),再由纯函数 `lib/feed-select.ts` 决定下一条(`lib/use-feed.ts` 负责编排缓冲与轮询):
