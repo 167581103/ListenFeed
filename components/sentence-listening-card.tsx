@@ -81,6 +81,7 @@ export function SentenceListeningCard({
           {level ? `${level} · ` : ""}
           {mode === "full" ? "完整回听" : `第 ${currentIndex + 1} / ${segments.length} 句`}
         </p>
+        <p className="listen-hint">左滑返回题目</p>
         <h2 className="question">{item.question}</h2>
 
         <div className="audio listening-audio">

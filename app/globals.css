@@ -52,6 +52,11 @@ body {
   scroll-snap-stop: always;
 }
 
+.card-gesture {
+  height: 100%;
+  touch-action: pan-y;
+}
+
 .card {
   position: relative;
   display: flex;
@@ -177,6 +182,17 @@ body {
 
 .option.dim {
   opacity: 0.32;
+}
+
+.no-quiz,
+.listen-hint {
+  margin: 28px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.listen-hint {
+  margin-top: 18px;
 }
 
 .listening-card {

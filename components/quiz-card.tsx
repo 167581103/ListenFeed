@@ -10,9 +10,11 @@ const REVEAL_RATIO = 0.68;
 export function QuizCard({
   item,
   isActive,
+  canListen = false,
 }: {
   item: PublishedItem;
   isActive: boolean;
+  canListen?: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
@@ -96,6 +98,7 @@ export function QuizCard({
           </button>
         </div>
 
+        {options.length > 0 ? (
         <ul className={`options${revealed ? " revealed" : ""}`}>
           {options.map((option, index) => {
             const answered = choice !== null;
@@ -122,6 +125,10 @@ export function QuizCard({
             );
           })}
         </ul>
+        ) : (
+          <p className="no-quiz">这条没有选择题</p>
+        )}
+        {canListen && <p className="listen-hint">右滑进入精听</p>}
       </div>
 
       <audio
