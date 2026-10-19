@@ -1,141 +1,166 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PublishedItem } from "@/lib/feed-types";
+import { createListeningSegments } from "@/lib/listening-segments";
 import { mediaUrl } from "@/lib/media";
-import { shuffleOptions } from "@/lib/shuffle-options";
 
-const REVEAL_RATIO = 0.68;
+type PlaybackMode = "practice" | "full";
 
-export function FeedCard({
-  item,
-  isActive,
-}: {
-  item: PublishedItem;
-  isActive: boolean;
-}) {
+export function FeedCard({ item, isActive }: { item: PublishedItem; isActive: boolean }) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const segmentEndRef = useRef<number | null>(null);
+  const segments = useMemo(
+    () => createListeningSegments(item.transcript, item.durationMs),
+    [item.durationMs, item.transcript],
+  );
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answerVisible, setAnswerVisible] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [mode, setMode] = useState<PlaybackMode>("practice");
   const [progress, setProgress] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const [choice, setChoice] = useState<string | null>(null);
-  // Defense in depth: even if a snapshot still ships answer-first, display order
-  // is shuffled (stable per id/version so remounts don't reshuffle).
-  const options = shuffleOptions(item.options, item.id, item.version);
+  const current = segments[currentIndex];
+
+  const playSegment = useCallback((index: number) => {
+    const audio = audioRef.current;
+    const segment = segments[index];
+    if (!audio || !segment) return;
+    segmentEndRef.current = segment.endMs / 1000;
+    audio.currentTime = segment.startMs / 1000;
+    setProgress(0);
+    void audio.play().catch(() => {
+      // Browsers require a gesture before audible playback; controls remain usable.
+    });
+  }, [segments]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
-    if (isActive) {
-      const play = () => {
-        void audio.play().catch(() => {
-          // Browsers may block audible autoplay until the first user gesture.
-          // The feed stays interruption-free and retries on natural interaction.
-        });
-      };
-
-      play();
-      window.addEventListener("pointerdown", play, { once: true });
-      window.addEventListener("touchend", play, { once: true });
-      window.addEventListener("keydown", play, { once: true });
-
-      return () => {
-        window.removeEventListener("pointerdown", play);
-        window.removeEventListener("touchend", play);
-        window.removeEventListener("keydown", play);
-      };
+    if (!isActive) {
+      audio.pause();
+      return;
     }
+    if (mode === "practice") playSegment(currentIndex);
+  }, [currentIndex, isActive, mode, playSegment]);
 
-    audio.pause();
-    audio.currentTime = 0;
-  }, [isActive]);
-
-  const start = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    void audio.play();
+  const selectSentence = (index: number) => {
+    setAnswerVisible(false);
+    setCurrentIndex(index);
   };
 
-  const replay = () => {
+  const replay = () => playSegment(currentIndex);
+
+  const unlockNext = () => {
+    if (currentIndex === segments.length - 1) {
+      setCompleted(true);
+      return;
+    }
+    selectSentence(currentIndex + 1);
+  };
+
+  const startFullReplay = () => {
     const audio = audioRef.current;
     if (!audio) return;
+    setMode("full");
+    segmentEndRef.current = null;
     audio.currentTime = 0;
-    start();
+    setProgress(0);
+    void audio.play().catch(() => {});
   };
+
+  const fullProgress = mode === "full" ? progress : 0;
+  const sentenceProgress = mode === "practice" ? progress : fullProgress;
 
   return (
     <article className="card">
       <span className="card-id" title={item.id}>#{item.seq}</span>
-      <div className="card-inner">
+      <div className="card-inner listening-card">
+        <p className="listening-kicker">
+          {mode === "full" ? "Full replay" : `Sentence ${currentIndex + 1} of ${segments.length}`}
+        </p>
         <h2 className="question">{item.question}</h2>
 
-        <div className="audio">
-          <div className="track">
-            <span style={{ width: `${progress * 100}%` }} />
+        <div className="audio listening-audio">
+          <div className="track" aria-hidden="true">
+            <span style={{ width: `${sentenceProgress * 100}%` }} />
           </div>
-          <button
-            type="button"
-            className="replay"
-            onClick={replay}
-            aria-label="Replay audio"
-          >
-            <svg
-              aria-hidden="true"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 4v6h6" />
-              <path d="M5.3 15a8 8 0 1 0 .7-7.6L4 10" />
-            </svg>
-          </button>
         </div>
 
-        <ul className={`options${revealed ? " revealed" : ""}`}>
-          {options.map((option, index) => {
-            const answered = choice !== null;
-            const isAnswer = option.id === item.answerId;
-            const state = !answered
-              ? ""
-              : isAnswer
-                ? " right"
-                : option.id === choice
-                  ? " missed"
-                  : " dim";
+        {mode === "practice" && current ? (
+          <>
+            <div className="sentence-controls">
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => selectSentence(currentIndex - 1)}
+                disabled={currentIndex === 0}
+              >
+                Previous sentence
+              </button>
+              <button type="button" className="secondary-action" onClick={replay}>
+                Replay
+              </button>
+            </div>
 
-            return (
-              <li key={option.id} style={{ transitionDelay: `${index * 70}ms` }}>
-                <button
-                  type="button"
-                  className={`option${state}`}
-                  disabled={answered}
-                  onClick={() => setChoice(option.id)}
-                >
-                  {option.label}
+            {!answerVisible ? (
+              <button type="button" className="primary-action" onClick={() => setAnswerVisible(true)}>
+                Show answer
+              </button>
+            ) : (
+              <section className="answer" aria-live="polite">
+                <p className="speaker">{current.speaker}</p>
+                <p>{current.line}</p>
+                <button type="button" className="primary-action" onClick={unlockNext}>
+                  {currentIndex === segments.length - 1 ? "Finish practice" : "Unlock next sentence"}
                 </button>
-              </li>
-            );
-          })}
-        </ul>
+              </section>
+            )}
+
+            {completed && (
+              <button type="button" className="full-replay-action" onClick={startFullReplay}>
+                Listen to the full audio
+              </button>
+            )}
+          </>
+        ) : (
+          <section className="full-transcript">
+            <p>Listen continuously, then review the complete transcript.</p>
+            <ol>
+              {segments.map((segment) => (
+                <li key={`${segment.startMs}-${segment.line}`}>
+                  <strong>{segment.speaker}:</strong> {segment.line}
+                </li>
+              ))}
+            </ol>
+            <button type="button" className="secondary-action" onClick={() => setMode("practice")}>
+              Return to sentence practice
+            </button>
+          </section>
+        )}
       </div>
 
       <audio
         ref={audioRef}
-        autoPlay={isActive}
-        preload="none"
+        preload="metadata"
+        onLoadedMetadata={() => {
+          if (isActive && mode === "practice") playSegment(currentIndex);
+        }}
         onTimeUpdate={(event) => {
           const audio = event.currentTarget;
-          if (!audio.duration) return;
-          const ratio = audio.currentTime / audio.duration;
-          setProgress(ratio);
-          if (ratio >= REVEAL_RATIO) setRevealed(true);
+          const end = segmentEndRef.current;
+          if (end != null && audio.currentTime >= end - 0.03) {
+            audio.pause();
+            audio.currentTime = end;
+            setProgress(1);
+            return;
+          }
+          if (mode === "full" && audio.duration) {
+            setProgress(audio.currentTime / audio.duration);
+          } else if (current) {
+            setProgress((audio.currentTime - current.startMs / 1000) / ((current.endMs - current.startMs) / 1000));
+          }
         }}
-        onEnded={() => setRevealed(true)}
+        onEnded={() => setProgress(1)}
       >
         <source src={mediaUrl(item.audio.webm)} type="audio/webm; codecs=opus" />
         <source src={mediaUrl(item.audio.mp3)} type="audio/mpeg" />

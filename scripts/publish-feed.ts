@@ -85,7 +85,12 @@ async function loadPublishedItems(): Promise<PublishedItem[]> {
             (SELECT json_agg(json_build_object('id', o.option_key, 'label', o.label) ORDER BY o.position)
                FROM feed_options o WHERE o.feed_item_id = fi.id) AS options,
             (SELECT o.option_key FROM feed_options o WHERE o.feed_item_id = fi.id AND o.is_correct LIMIT 1) AS answer_id,
-            (SELECT json_agg(json_build_object('speaker', t.speaker_label, 'line', t.line) ORDER BY t.position)
+            (SELECT json_agg(json_build_object(
+                'speaker', t.speaker_label,
+                'line', t.line,
+                'startMs', t.start_ms,
+                'endMs', t.end_ms
+              ) ORDER BY t.position)
                FROM transcript_lines t WHERE t.feed_item_id = fi.id) AS transcript
        FROM feed_items fi
        JOIN audio_assets aa ON aa.id = fi.audio_asset_id

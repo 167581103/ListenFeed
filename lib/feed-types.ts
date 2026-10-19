@@ -14,6 +14,10 @@ export type ListeningOption = {
 export type TranscriptLine = {
   speaker: string;
   line: string;
+  /** Sentence start in the source audio. Required for precise listening mode. */
+  startMs?: number;
+  /** Sentence end in the source audio. Required for precise listening mode. */
+  endMs?: number;
 };
 
 /**

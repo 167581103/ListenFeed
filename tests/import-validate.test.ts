@@ -49,6 +49,22 @@ test("requires durationMs when referencing existing audio", () => {
   assert.ok(r.errors.some((e) => e.includes("durationMs")));
 });
 
+test("requires complete and valid transcript timings when supplied", () => {
+  const missingEnd = validateImportItem({
+    ...valid,
+    transcript: [{ speaker: "A", line: "Hello", startMs: 10 }],
+  });
+  assert.equal(missingEnd.ok, false);
+  assert.ok(missingEnd.errors.some((e) => e.includes("both startMs and endMs")));
+
+  const backwards = validateImportItem({
+    ...valid,
+    transcript: [{ speaker: "A", line: "Hello", startMs: 100, endMs: 10 }],
+  });
+  assert.equal(backwards.ok, false);
+  assert.ok(backwards.errors.some((e) => e.includes("invalid timing")));
+});
+
 test("validation failures are non-retryable", () => {
   const r = validateImportItem({});
   assert.equal(r.ok, false);

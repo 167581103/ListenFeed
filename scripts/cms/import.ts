@@ -155,9 +155,18 @@ async function importOneItem(item: ImportItem): Promise<{ status: "created" | "u
     await client.query("DELETE FROM transcript_lines WHERE feed_item_id=$1", [feedItemId]);
     for (const [i, line] of (item.transcript ?? []).entries()) {
       await client.query(
-        `INSERT INTO transcript_lines (feed_item_id, speaker_key, speaker_label, line, position)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [feedItemId, line.speaker.toLowerCase().replace(/\s+/g, "_") || "speaker", line.speaker, line.line, i],
+        `INSERT INTO transcript_lines
+           (feed_item_id, speaker_key, speaker_label, line, position, start_ms, end_ms)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [
+          feedItemId,
+          line.speaker.toLowerCase().replace(/\s+/g, "_") || "speaker",
+          line.speaker,
+          line.line,
+          i,
+          line.startMs ?? null,
+          line.endMs ?? null,
+        ],
       );
     }
 

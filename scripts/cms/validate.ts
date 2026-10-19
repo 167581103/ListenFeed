@@ -1,7 +1,12 @@
 // Input contract for the content factory + pure validation (unit-tested).
 
 export type ImportOption = { id: string; label: string };
-export type ImportTranscriptLine = { speaker: string; line: string };
+export type ImportTranscriptLine = {
+  speaker: string;
+  line: string;
+  startMs?: number;
+  endMs?: number;
+};
 
 export type ImportItem = {
   /** Idempotency key from the content factory. Required. */
@@ -82,6 +87,29 @@ export function validateImportItem(item: unknown): ValidationResult {
   }
   if (it.level != null && !LEVELS.has(it.level)) {
     errors.push(`level must be one of ${[...LEVELS].join(", ")}`);
+  }
+  if (it.transcript != null && !Array.isArray(it.transcript)) {
+    errors.push("transcript must be an array");
+  } else {
+    for (const [i, line] of (it.transcript ?? []).entries()) {
+      if (!line || typeof line.speaker !== "string" || typeof line.line !== "string") {
+        errors.push(`transcript line ${i} must have speaker and line strings`);
+        continue;
+      }
+      const hasStart = line.startMs != null;
+      const hasEnd = line.endMs != null;
+      if (hasStart !== hasEnd) {
+        errors.push(`transcript line ${i} must provide both startMs and endMs`);
+      } else if (
+        hasStart &&
+        (!Number.isInteger(line.startMs) ||
+          !Number.isInteger(line.endMs) ||
+          line.startMs < 0 ||
+          line.endMs <= line.startMs)
+      ) {
+        errors.push(`transcript line ${i} has invalid timing`);
+      }
+    }
   }
 
   return { ok: errors.length === 0, errors, retryable: false };
