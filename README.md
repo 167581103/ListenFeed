@@ -19,9 +19,9 @@
 - **查看答案**：显示当前句文本、翻译和术语；这是解锁下一句的前置条件。
 - **完整回听**：最后一句完成后开放，取消句尾暂停，从音频开头连续播放，并显示完整文本。
 
-内容用 `learningMode` 区分。`quiz` 保持原来的听力选择题；`sentence-listening` 不需要伪造选项，改为逐句时间轴。每句可带 `translation` 和 `terms`。数据库的 `level` 仍只接受 CEFR，JLPT 等框架等级写入 `proficiency`（例如 N5 对应 CEFR `A1`）。
+`sentence-listening` 只表示这条内容没有选择题，不改变默认界面。逐句文稿可带 `translation` 和 `terms`。数据库的 `level` 仍只接受 CEFR，JLPT 等框架等级写入 `proficiency`（例如 N5 对应 CEFR `A1`）。
 
-`content/jp-news-daily-2026-10-19.json` 是第一条精听内容：16 句日语慢速新闻，时间覆盖 `0–49,700ms`。导入为草稿，审核发布后才会进入线上 Feed。
+`content/jp-news-daily-2026-10-19.json` 是第一条精听内容：16 句日语慢速新闻，时间覆盖 `0–49,700ms`。
 
 ## 存储策略
 
