@@ -17,6 +17,11 @@ export function FeedCard({
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const segmentEndRef = useRef<number | null>(null);
+  const listeningRef = useRef(false);
+  const fullReplayRef = useRef(false);
+  // Clicks start playback themselves. Swallow the effect that follows so
+  // leaving 精听 does not seek to the beginning.
+  const suppressPlaybackEffect = useRef(false);
   const segments = useMemo(
     () => createListeningSegments(item.transcript, item.durationMs),
     [item.durationMs, item.transcript],
@@ -48,6 +53,7 @@ export function FeedCard({
     const audio = audioRef.current;
     const segment = segments[index];
     if (!audio || !segment) return;
+    fullReplayRef.current = false;
     setFullReplay(false);
     segmentEndRef.current = segment.endMs / 1000;
     audio.currentTime = segment.startMs / 1000;
@@ -60,6 +66,11 @@ export function FeedCard({
     if (!audio) return;
     if (!isActive) {
       audio.pause();
+      suppressPlaybackEffect.current = false;
+      return;
+    }
+    if (suppressPlaybackEffect.current) {
+      suppressPlaybackEffect.current = false;
       return;
     }
     if (listening && !fullReplay) playSegment(currentIndex);
@@ -67,8 +78,22 @@ export function FeedCard({
   }, [currentIndex, fullReplay, isActive, listening, playFullAudio, playSegment]);
 
   const showSentence = (index: number) => {
+    suppressPlaybackEffect.current = true;
+    fullReplayRef.current = false;
     setFullReplay(false);
     setCurrentIndex(index);
+    playSegment(index);
+  };
+
+  const leaveListening = () => {
+    suppressPlaybackEffect.current = true;
+    segmentEndRef.current = null;
+    listeningRef.current = false;
+    fullReplayRef.current = false;
+    setListening(false);
+    setFullReplay(false);
+    const audio = audioRef.current;
+    if (audio?.paused) void audio.play().catch(() => {});
   };
 
   return (
@@ -95,7 +120,7 @@ export function FeedCard({
 
         {listening && current ? (
           <div className="sentence-panel">
-            <button type="button" className="secondary-action" onClick={() => setListening(false)}>
+            <button type="button" className="secondary-action" onClick={leaveListening}>
               返回
             </button>
             <div className="sentence-controls">
@@ -128,6 +153,9 @@ export function FeedCard({
                   type="button"
                   className="primary-action"
                   onClick={() => {
+                    suppressPlaybackEffect.current = true;
+                    fullReplayRef.current = true;
+                    segmentEndRef.current = null;
                     setFullReplay(true);
                     playFullAudio();
                   }}
@@ -164,7 +192,18 @@ export function FeedCard({
               </ul>
             )}
             {segments.length > 0 && (
-              <button type="button" className="secondary-action mode-action" onClick={() => { setFullReplay(false); setListening(true); }}>
+              <button
+                type="button"
+                className="secondary-action mode-action"
+                onClick={() => {
+                  suppressPlaybackEffect.current = true;
+                  fullReplayRef.current = false;
+                  listeningRef.current = true;
+                  setFullReplay(false);
+                  setListening(true);
+                  playSegment(currentIndex);
+                }}
+              >
                 精听
               </button>
             )}
@@ -175,24 +214,24 @@ export function FeedCard({
       <audio
         ref={audioRef}
         preload="metadata"
-        onLoadedMetadata={() => {
-          if (!isActive) return;
-          if (listening && !fullReplay) playSegment(currentIndex);
-          else playFullAudio();
+        onLoadedMetadata={(event) => {
+          const audio = event.currentTarget;
+          if (!isActive || !audio.paused) return;
+          if (listeningRef.current && !fullReplayRef.current) playSegment(currentIndex);
+          else if (!listeningRef.current && audio.currentTime < 0.05) playFullAudio();
         }}
         onTimeUpdate={(event) => {
           const audio = event.currentTarget;
           const end = segmentEndRef.current;
-          if (listening && !fullReplay && end != null && audio.currentTime >= end - 0.03) {
+          if (listeningRef.current && !fullReplayRef.current && end != null && audio.currentTime >= end - 0.03) {
             audio.pause();
-            audio.currentTime = end;
             setProgress(1);
             return;
           }
-          if ((!listening || fullReplay) && audio.duration) {
+          if ((!listeningRef.current || fullReplayRef.current) && audio.duration) {
             const ratio = audio.currentTime / audio.duration;
             setProgress(ratio);
-            if (!listening && ratio >= REVEAL_RATIO) setRevealed(true);
+            if (!listeningRef.current && ratio >= REVEAL_RATIO) setRevealed(true);
           } else if (current) {
             const duration = (current.endMs - current.startMs) / 1000;
             setProgress(duration > 0 ? (audio.currentTime - current.startMs / 1000) / duration : 0);
