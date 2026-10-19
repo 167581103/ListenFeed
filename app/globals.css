@@ -54,6 +54,7 @@ body {
 
 .card-gesture {
   height: 100%;
+  overflow: hidden;
   touch-action: pan-y;
 }
 
@@ -184,15 +185,49 @@ body {
   opacity: 0.32;
 }
 
-.no-quiz,
-.listen-hint {
-  margin: 28px 0 0;
-  color: var(--muted);
-  font-size: 13px;
+.control-stage {
+  position: relative;
+  height: clamp(290px, 39svh, 380px);
+  margin-top: 34px;
+  overflow: hidden;
 }
 
-.listen-hint {
-  margin-top: 18px;
+.control-panel {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.quiz-controls {
+  transform: translateX(0);
+}
+
+.sentence-controls-panel {
+  transform: translateX(108%);
+}
+
+.control-stage.listening .quiz-controls {
+  transform: translateX(-108%);
+}
+
+.control-stage.listening .sentence-controls-panel {
+  transform: translateX(0);
+}
+
+.control-stage .options {
+  margin-top: 0;
+}
+
+.sentence-controls-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.sentence-controls-panel > .primary-action,
+.sentence-controls-panel > .full-replay-action {
+  margin: 0;
 }
 
 .listening-card {

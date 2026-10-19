@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { classifySwipe } from "../lib/horizontal-swipe";
 
-test("classifies a clear right or left swipe", () => {
+test("classifies movement direction", () => {
   assert.equal(classifySwipe(80, 10), "right");
   assert.equal(classifySwipe(-80, 8), "left");
 });
