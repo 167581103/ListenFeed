@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { PublishedItem } from "@/lib/feed-types";
-import { choosePanAxis, clampPanOffset, shouldOpenListening } from "@/lib/horizontal-swipe";
+import { allowPanAxis, axisLock, choosePanAxis, clampPanOffset, shouldOpenListening } from "@/lib/horizontal-swipe";
 import { createListeningSegments } from "@/lib/listening-segments";
 import { mediaUrl } from "@/lib/media";
 import { shuffleOptions } from "@/lib/shuffle-options";
@@ -33,10 +33,11 @@ export function FeedCard({
     startY: number;
     lastX: number;
     lastTime: number;
-    axis: "x" | "y" | null;
+    axis: "x" | "y" | "blocked" | null;
     origin: number;
     velocity: number;
     scrollTop: number;
+    release: (() => void) | null;
   } | null>(null);
   const segmentEndRef = useRef<number | null>(null);
   const segments = useMemo(
@@ -98,29 +99,71 @@ export function FeedCard({
     if (!draggingRef.current) writePan(listening ? -1 : 0, true);
   }, [listening, writePan]);
 
+  const visibleFraction = () => {
+    const stage = stageRef.current;
+    const quiz = stage?.querySelector<HTMLElement>(".quiz-controls");
+    const width = stage?.clientWidth || 1;
+    const matrix = quiz ? getComputedStyle(quiz).transform : "";
+    const match = matrix.match(/matrix\(([^)]+)\)/);
+    if (!match) return listeningRef.current ? -1 : 0;
+    return Number(match[1].split(",")[4]) / width;
+  };
+
   const finishPan = (event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     dragRef.current = null;
     draggingRef.current = false;
+    if (!drag || drag.pointerId !== event.pointerId || drag.axis === "blocked" || drag.axis == null) return;
     const feed = gestureRef.current?.closest<HTMLElement>(".feed");
-    if (feed) feed.style.scrollSnapType = "";
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    // A cancelled pointer can report a zero coordinate and must not throw the gesture away.
+    const x = event.type === "pointercancel" ? drag.lastX : event.clientX;
 
     if (drag.axis === "y" && feed) {
+      feed.style.scrollSnapType = "";
       const height = feed.clientHeight;
       const index = height ? Math.round(feed.scrollTop / height) : 0;
-      feed.scrollTo({ top: index * height, behavior: "smooth" });
+      const top = index * height;
+      if (Math.abs(feed.scrollTop - top) < 1) {
+        drag.release?.();
+        return;
+      }
+      const release = drag.release ?? (() => {});
+      const done = () => {
+        if (Math.abs(feed.scrollTop - top) > 1) return;
+        feed.removeEventListener("scrollend", done);
+        window.clearTimeout(timer);
+        release();
+      };
+      const timer = window.setTimeout(() => {
+        feed.removeEventListener("scrollend", done);
+        release();
+      }, 700);
+      feed.addEventListener("scrollend", done);
+      feed.scrollTo({ top, behavior: "smooth" });
       return;
     }
-    if (drag.axis !== "x") return;
 
     const width = stageRef.current?.clientWidth || 1;
-    const fraction = clampPanOffset(drag.origin, event.clientX - drag.startX, canListen ? -width : 0, 0) / width;
+    const fraction = clampPanOffset(drag.origin, x - drag.startX, canListen ? -width : 0, 0) / width;
     const open = canListen && shouldOpenListening(fraction, drag.velocity / width);
     if (open) setFullReplay(false);
     listeningRef.current = open;
     setListening(open);
     writePan(open ? -1 : 0, true);
+    const panel = stageRef.current?.querySelector<HTMLElement>(".quiz-controls");
+    const release = drag.release ?? (() => {});
+    if (!panel || Math.abs(fraction - (open ? -1 : 0)) < 0.01) {
+      release();
+    } else {
+      const done = (event?: Event) => {
+        if (event && (event.target !== panel || (event as TransitionEvent).propertyName !== "transform")) return;
+        panel.removeEventListener("transitionend", done);
+        window.clearTimeout(timer);
+        release();
+      };
+      const timer = window.setTimeout(() => done(), 360);
+      panel.addEventListener("transitionend", done);
+    }
     window.addEventListener("click", (click) => {
       click.preventDefault();
       click.stopPropagation();
@@ -148,7 +191,6 @@ export function FeedCard({
       onPointerDown={(event) => {
         if (event.button !== 0) return;
         const feed = gestureRef.current?.closest<HTMLElement>(".feed");
-        if (feed) feed.style.scrollSnapType = "none";
         dragRef.current = {
           pointerId: event.pointerId,
           startX: event.clientX,
@@ -156,23 +198,32 @@ export function FeedCard({
           lastX: event.clientX,
           lastTime: event.timeStamp,
           axis: null,
-          origin: (listeningRef.current ? -1 : 0) * (stageRef.current?.clientWidth || 1),
+          origin: visibleFraction() * (stageRef.current?.clientWidth || 1),
           velocity: 0,
           scrollTop: feed?.scrollTop ?? 0,
+          release: null,
         };
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={(event) => {
         const drag = dragRef.current;
-        if (!drag || drag.pointerId !== event.pointerId) return;
+        if (!drag || drag.pointerId !== event.pointerId || drag.axis === "blocked") return;
         const dx = event.clientX - drag.startX;
         const dy = event.clientY - drag.startY;
         if (!drag.axis) {
-          drag.axis = choosePanAxis(dx, dy);
-          if (!drag.axis) return;
-          if (drag.axis === "x") {
+          const next = choosePanAxis(dx, dy);
+          if (!next) return;
+          // A locked axis keeps its animation; the other direction cannot cancel it.
+          if (!allowPanAxis(axisLock.get(), next)) {
+            drag.axis = "blocked";
+            return;
+          }
+          drag.axis = next;
+          drag.release = axisLock.claim(next);
+          const feed = gestureRef.current?.closest<HTMLElement>(".feed");
+          if (next === "y" && feed) feed.style.scrollSnapType = "none";
+          if (next === "x") {
             draggingRef.current = true;
-            const feed = gestureRef.current?.closest<HTMLElement>(".feed");
             if (feed) feed.scrollTop = drag.scrollTop;
           }
         }
