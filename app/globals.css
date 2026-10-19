@@ -52,19 +52,14 @@ body {
   scroll-snap-stop: always;
 }
 
-.card-gesture {
-  height: 100%;
-  overflow: hidden;
-  touch-action: none;
-}
-
 .card {
   position: relative;
   display: flex;
   height: 100%;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 28px;
+  overflow-y: auto;
 }
 
 /* Unique content id (global publish sequence) for support/troubleshooting.
@@ -83,6 +78,7 @@ body {
 .card-inner {
   width: 100%;
   max-width: 480px;
+  margin-block: auto;
 }
 
 .question {
@@ -185,70 +181,15 @@ body {
   opacity: 0.32;
 }
 
-.control-stage {
-  position: relative;
-  height: clamp(290px, 39svh, 380px);
-  margin-top: 34px;
-  overflow: hidden;
-}
-
-.control-panel {
-  position: absolute;
-  inset: 0;
-  overflow-y: auto;
-  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-
-.control-stage.panning .control-panel {
-  transition: none;
-}
-
-.quiz-controls {
-  transform: translateX(0);
-}
-
-.sentence-controls-panel {
-  transform: translateX(108%);
-}
-
-.control-stage.listening .quiz-controls {
-  transform: translateX(-108%);
-}
-
-.control-stage.listening .sentence-controls-panel {
-  transform: translateX(0);
-}
-
-.control-stage .options {
-  margin-top: 0;
-}
-
-.sentence-controls-panel {
+.sentence-panel {
   display: grid;
-  align-content: start;
   gap: 14px;
+  margin-top: 28px;
 }
 
-.sentence-controls-panel > .primary-action,
-.sentence-controls-panel > .full-replay-action {
-  margin: 0;
-}
-
-.listening-card {
-  display: grid;
-  gap: 18px;
-}
-
-.listening-kicker {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.listening-audio {
-  margin-top: 0;
+.mode-action {
+  width: 100%;
+  margin-top: 18px;
 }
 
 .sentence-controls {
@@ -258,8 +199,7 @@ body {
 }
 
 .primary-action,
-.secondary-action,
-.full-replay-action {
+.secondary-action {
   border-radius: 12px;
   padding: 14px 16px;
   font: inherit;
@@ -285,8 +225,7 @@ body {
   cursor: not-allowed;
 }
 
-.answer,
-.full-transcript {
+.answer {
   display: grid;
   gap: 12px;
   padding: 17px;
@@ -295,14 +234,12 @@ body {
   line-height: 1.55;
 }
 
-.answer p,
-.full-transcript p {
+.answer p {
   margin: 0;
 }
 
 .speaker,
-.translation,
-.study-notes {
+.translation {
   color: var(--muted);
 }
 
@@ -325,25 +262,4 @@ body {
   border-radius: 999px;
   color: var(--ink);
   font-size: 13px;
-}
-
-.full-transcript li {
-  display: grid;
-  gap: 4px;
-}
-
-.full-replay-action {
-  width: 100%;
-  border: 1px dashed var(--ink);
-  background: transparent;
-  color: var(--ink);
-}
-
-.full-transcript ol {
-  display: grid;
-  gap: 12px;
-  max-height: 35svh;
-  margin: 0;
-  padding-left: 20px;
-  overflow-y: auto;
 }
