@@ -56,9 +56,10 @@ body {
   position: relative;
   display: flex;
   height: 100%;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 28px;
+  overflow-y: auto;
 }
 
 /* Unique content id (global publish sequence) for support/troubleshooting.
@@ -77,6 +78,7 @@ body {
 .card-inner {
   width: 100%;
   max-width: 480px;
+  margin-block: auto;
 }
 
 .question {
@@ -177,4 +179,87 @@ body {
 
 .option.dim {
   opacity: 0.32;
+}
+
+.sentence-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.mode-action {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.sentence-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.primary-action,
+.secondary-action {
+  border-radius: 12px;
+  padding: 14px 16px;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.primary-action {
+  width: 100%;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.secondary-action {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.secondary-action:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.answer {
+  display: grid;
+  gap: 12px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  line-height: 1.55;
+}
+
+.answer p {
+  margin: 0;
+}
+
+.speaker,
+.translation {
+  color: var(--muted);
+}
+
+.sentence-line {
+  font-size: 18px;
+}
+
+.terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terms li {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 13px;
 }

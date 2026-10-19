@@ -116,11 +116,12 @@ async function importOneItem(item: ImportItem): Promise<{ status: "created" | "u
         `UPDATE feed_items SET
            title=$2, eyebrow=$3, level=$4, question=$5, explanation=$6, audio_asset_id=$7,
            content_version=$8, language=$9, locale=$10, accent=$11, topic=$12, scenario=$13,
-           format=$14, speech_rate=$15, updated_at=now()
+           format=$14, speech_rate=$15, learning_mode=$16, proficiency=$17, updated_at=now()
          WHERE id=$1`,
         [feedItemId, title, eyebrow, level, item.question, explanation, audioAssetId, version,
           item.language ?? null, item.locale ?? null, item.accent ?? null, item.topic ?? null,
-          item.scenario ?? null, item.format ?? null, item.speechRate ?? null],
+          item.scenario ?? null, item.format ?? null, item.speechRate ?? null,
+          item.learningMode ?? "quiz", item.proficiency ?? null],
       );
     } else {
       version = 1;
@@ -128,12 +129,14 @@ async function importOneItem(item: ImportItem): Promise<{ status: "created" | "u
       const ins = await client.query<{ id: string }>(
         `INSERT INTO feed_items
            (slug, external_id, title, eyebrow, level, question, explanation, audio_asset_id,
-            status, content_version, language, locale, accent, topic, scenario, format, speech_rate)
-         VALUES ($1,$1,$2,$3,$4,$5,$6,$7,'draft',1,$8,$9,$10,$11,$12,$13,$14)
+            status, content_version, language, locale, accent, topic, scenario, format, speech_rate,
+            learning_mode, proficiency)
+         VALUES ($1,$1,$2,$3,$4,$5,$6,$7,'draft',1,$8,$9,$10,$11,$12,$13,$14,$15,$16)
          RETURNING id`,
         [item.externalId, title, eyebrow, level, item.question, explanation, audioAssetId,
           item.language ?? null, item.locale ?? null, item.accent ?? null, item.topic ?? null,
-          item.scenario ?? null, item.format ?? null, item.speechRate ?? null],
+          item.scenario ?? null, item.format ?? null, item.speechRate ?? null,
+          item.learningMode ?? "quiz", item.proficiency ?? null],
       );
       feedItemId = ins.rows[0].id;
     }
@@ -142,7 +145,9 @@ async function importOneItem(item: ImportItem): Promise<{ status: "created" | "u
     // Shuffle first so content that always ships answer-first doesn't land as
     // option_key "a" / position 0 for every item.
     await client.query("DELETE FROM feed_options WHERE feed_item_id=$1", [feedItemId]);
-    const options = shuffleWithSeed(item.options, item.externalId);
+    const options = item.learningMode === "sentence-listening"
+      ? []
+      : shuffleWithSeed(item.options ?? [], item.externalId);
     for (const [i, opt] of options.entries()) {
       await client.query(
         `INSERT INTO feed_options (feed_item_id, option_key, label, is_correct, position)
@@ -155,9 +160,20 @@ async function importOneItem(item: ImportItem): Promise<{ status: "created" | "u
     await client.query("DELETE FROM transcript_lines WHERE feed_item_id=$1", [feedItemId]);
     for (const [i, line] of (item.transcript ?? []).entries()) {
       await client.query(
-        `INSERT INTO transcript_lines (feed_item_id, speaker_key, speaker_label, line, position)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [feedItemId, line.speaker.toLowerCase().replace(/\s+/g, "_") || "speaker", line.speaker, line.line, i],
+        `INSERT INTO transcript_lines
+           (feed_item_id, speaker_key, speaker_label, line, position, start_ms, end_ms, translation, terms)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [
+          feedItemId,
+          line.speaker.toLowerCase().replace(/\s+/g, "_") || "speaker",
+          line.speaker,
+          line.line,
+          i,
+          line.startMs ?? null,
+          line.endMs ?? null,
+          line.translation ?? null,
+          line.terms ?? null,
+        ],
       );
     }
 
