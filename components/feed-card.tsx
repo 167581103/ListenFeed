@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { PublishedItem } from "@/lib/feed-types";
-import { classifySwipe } from "@/lib/horizontal-swipe";
+import { choosePanAxis, clampPanOffset, shouldOpenListening } from "@/lib/horizontal-swipe";
 import { createListeningSegments } from "@/lib/listening-segments";
 import { mediaUrl } from "@/lib/media";
 import { shuffleOptions } from "@/lib/shuffle-options";
@@ -22,8 +22,22 @@ export function FeedCard({
   const [fullReplay, setFullReplay] = useState(false);
   const [progress, setProgress] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const startRef = useRef<{ x: number; y: number } | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const gestureRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const listeningRef = useRef(false);
+  const draggingRef = useRef(false);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastTime: number;
+    axis: "x" | "y" | null;
+    origin: number;
+    velocity: number;
+    scrollTop: number;
+  } | null>(null);
   const segmentEndRef = useRef<number | null>(null);
   const segments = useMemo(
     () => createListeningSegments(item.transcript, item.durationMs),
@@ -67,20 +81,50 @@ export function FeedCard({
     else playFullAudio();
   }, [currentIndex, fullReplay, isActive, listening, playFullAudio, playSegment]);
 
-  const finishSwipe = (event: PointerEvent) => {
-    const start = startRef.current;
-    startRef.current = null;
-    if (!start) return;
-    const direction = classifySwipe(event.clientX - start.x, event.clientY - start.y);
-    // "Right swipe" means the content moves right-to-left under the finger.
-    if (direction === "left" && canListen) {
-      setFullReplay(false);
-      setListening(true);
+  const writePan = useCallback((fraction: number, animate: boolean) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    stage.classList.toggle("panning", !animate);
+    const percent = `${fraction * 100}%`;
+    const next = `${(fraction + 1) * 100}%`;
+    const quiz = stage.querySelector<HTMLElement>(".quiz-controls");
+    const sentence = stage.querySelector<HTMLElement>(".sentence-controls-panel");
+    if (quiz) quiz.style.transform = `translate3d(${percent}, 0, 0)`;
+    if (sentence) sentence.style.transform = `translate3d(${next}, 0, 0)`;
+  }, []);
+
+  useLayoutEffect(() => {
+    listeningRef.current = listening;
+    if (!draggingRef.current) writePan(listening ? -1 : 0, true);
+  }, [listening, writePan]);
+
+  const finishPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    draggingRef.current = false;
+    const feed = gestureRef.current?.closest<HTMLElement>(".feed");
+    if (feed) feed.style.scrollSnapType = "";
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    if (drag.axis === "y" && feed) {
+      const height = feed.clientHeight;
+      const index = height ? Math.round(feed.scrollTop / height) : 0;
+      feed.scrollTo({ top: index * height, behavior: "smooth" });
+      return;
     }
-    if (direction === "right") {
-      setFullReplay(false);
-      setListening(false);
-    }
+    if (drag.axis !== "x") return;
+
+    const width = stageRef.current?.clientWidth || 1;
+    const fraction = clampPanOffset(drag.origin, event.clientX - drag.startX, canListen ? -width : 0, 0) / width;
+    const open = canListen && shouldOpenListening(fraction, drag.velocity / width);
+    if (open) setFullReplay(false);
+    listeningRef.current = open;
+    setListening(open);
+    writePan(open ? -1 : 0, true);
+    window.addEventListener("click", (click) => {
+      click.preventDefault();
+      click.stopPropagation();
+    }, { capture: true, once: true });
   };
 
   const selectSentence = (index: number) => {
@@ -99,23 +143,53 @@ export function FeedCard({
 
   return (
     <div
+      ref={gestureRef}
       className="card-gesture"
       onPointerDown={(event) => {
         if (event.button !== 0) return;
-        startRef.current = { x: event.clientX, y: event.clientY };
-        const end = (pointer: PointerEvent) => {
-          window.removeEventListener("pointerup", end);
-          window.removeEventListener("pointercancel", cancel);
-          finishSwipe(pointer);
+        const feed = gestureRef.current?.closest<HTMLElement>(".feed");
+        if (feed) feed.style.scrollSnapType = "none";
+        dragRef.current = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          lastX: event.clientX,
+          lastTime: event.timeStamp,
+          axis: null,
+          origin: (listeningRef.current ? -1 : 0) * (stageRef.current?.clientWidth || 1),
+          velocity: 0,
+          scrollTop: feed?.scrollTop ?? 0,
         };
-        const cancel = () => {
-          window.removeEventListener("pointerup", end);
-          window.removeEventListener("pointercancel", cancel);
-          startRef.current = null;
-        };
-        window.addEventListener("pointerup", end);
-        window.addEventListener("pointercancel", cancel);
+        event.currentTarget.setPointerCapture(event.pointerId);
       }}
+      onPointerMove={(event) => {
+        const drag = dragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        const dx = event.clientX - drag.startX;
+        const dy = event.clientY - drag.startY;
+        if (!drag.axis) {
+          drag.axis = choosePanAxis(dx, dy);
+          if (!drag.axis) return;
+          if (drag.axis === "x") {
+            draggingRef.current = true;
+            const feed = gestureRef.current?.closest<HTMLElement>(".feed");
+            if (feed) feed.scrollTop = drag.scrollTop;
+          }
+        }
+        if (drag.axis === "y") {
+          const feed = gestureRef.current?.closest<HTMLElement>(".feed");
+          if (feed) feed.scrollTop = drag.scrollTop - dy;
+          return;
+        }
+        const width = stageRef.current?.clientWidth || 1;
+        const dt = event.timeStamp - drag.lastTime;
+        if (dt > 0) drag.velocity = (event.clientX - drag.lastX) / dt;
+        drag.lastX = event.clientX;
+        drag.lastTime = event.timeStamp;
+        writePan(clampPanOffset(drag.origin, dx, canListen ? -width : 0, 0) / width, false);
+      }}
+      onPointerUp={finishPan}
+      onPointerCancel={finishPan}
     >
       <article className="card">
         <span className="card-id" title={item.id}>#{item.seq}</span>
@@ -149,7 +223,7 @@ export function FeedCard({
             </button>
           </div>
 
-          <div className={`control-stage${listening ? " listening" : ""}`}>
+          <div ref={stageRef} className={`control-stage${listening ? " listening" : ""}`}>
             <div className="control-panel quiz-controls">
               {options.length > 0 && (
                 <ul className={`options${revealed ? " revealed" : ""}`}>

@@ -55,7 +55,7 @@ body {
 .card-gesture {
   height: 100%;
   overflow: hidden;
-  touch-action: pan-y;
+  touch-action: none;
 }
 
 .card {
@@ -196,7 +196,12 @@ body {
   position: absolute;
   inset: 0;
   overflow-y: auto;
-  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.control-stage.panning .control-panel {
+  transition: none;
 }
 
 .quiz-controls {
