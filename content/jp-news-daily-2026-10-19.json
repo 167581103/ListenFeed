@@ -1,0 +1,148 @@
+[
+  {
+    "externalId": "jp-news-daily-2026-10-19",
+    "learningMode": "sentence-listening",
+    "title": "10月19日新闻",
+    "eyebrow": "日语 N5",
+    "question": "10月19日新闻",
+    "explanation": "慢速 N5 新闻播报，专有名词按真实新闻保留。重点句式：ます/です、から表示范围、以上、い形容词比较、で表示手段、気をつけてください。长音注意ニュース、空気、電車、北京。数字「三十七億一千万人」要按位数听写。",
+    "level": "A1",
+    "proficiency": "N5",
+    "language": "ja",
+    "locale": "ja-JP",
+    "topic": "news",
+    "scenario": "daily-news",
+    "format": "monologue",
+    "speechRate": 269,
+    "durationMs": 50000,
+    "audioContentHash": "e9fefdb17b8e9c94",
+    "transcript": [
+      {
+        "speaker": "アナウンサー",
+        "line": "今日のニュースです。",
+        "translation": "今天的新闻。",
+        "startMs": 0,
+        "endMs": 1160
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "まず、天気です。",
+        "translation": "首先是天气。",
+        "startMs": 1520,
+        "endMs": 2840
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "今日は、新しい冷たい空気が来ます。",
+        "translation": "今天，新的冷空气来了。",
+        "startMs": 3540,
+        "endMs": 6240
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "中国の真ん中と東のところは、四度から六度、寒くなります。",
+        "translation": "中国中部和东部会降温4到6度。",
+        "startMs": 6780,
+        "endMs": 11980,
+        "terms": [
+          "中国(ちゅうごく)"
+        ]
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "華北の西と東北の一部は、八度以上、寒くなります。",
+        "translation": "华北西部和东北部分地区会降温8度以上。",
+        "startMs": 12560,
+        "endMs": 17080,
+        "terms": [
+          "華北(かほく)",
+          "東北(とうほく)"
+        ]
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "今日の北京は、晴れて、最高十九度です。",
+        "translation": "今天北京是晴天，最高19度。",
+        "startMs": 18020,
+        "endMs": 21320,
+        "terms": [
+          "北京(ぺきん)"
+        ]
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "朝と夜は、もっと寒いです。",
+        "translation": "早晚更冷。",
+        "startMs": 21820,
+        "endMs": 23900
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "風邪に気をつけてください。",
+        "translation": "请注意别感冒。",
+        "startMs": 24340,
+        "endMs": 25640
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "次は、スポーツです。",
+        "translation": "接下来是体育。",
+        "startMs": 26520,
+        "endMs": 27940
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "今日、第五回アジアパラスポーツ大会が始まりました。",
+        "translation": "今天，第五届亚洲残运会开幕了。",
+        "startMs": 28720,
+        "endMs": 32439,
+        "terms": [
+          "第五回(だいごかい)",
+          "アジアパラスポーツ大会(アジアパラスポーツたいかい)"
+        ]
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "いろいろな国の人が、スポーツをします。",
+        "translation": "各个国家的人来参加体育比赛。",
+        "startMs": 32940,
+        "endMs": 35400
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "最後は、電車のニュースです。",
+        "translation": "最后是铁路新闻。",
+        "startMs": 36360,
+        "endMs": 38220
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "今年、電車で旅行した人は、三十七億一千万人でした。",
+        "translation": "今年坐火车旅行的人是37.1亿人次。",
+        "startMs": 38820,
+        "endMs": 43220
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "それは、今までで一番多いです。",
+        "translation": "这是到目前为止最多的。",
+        "startMs": 43880,
+        "endMs": 46140
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "今日のニュースは、これで終わりです。",
+        "translation": "今天的新闻就到这里。",
+        "startMs": 46760,
+        "endMs": 48840
+      },
+      {
+        "speaker": "アナウンサー",
+        "line": "また明日。",
+        "translation": "明天见。",
+        "startMs": 49140,
+        "endMs": 49700
+      }
+    ]
+  }
+]

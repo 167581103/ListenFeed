@@ -189,8 +189,6 @@ body {
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .listening-audio {
@@ -246,11 +244,36 @@ body {
   margin: 0;
 }
 
-.speaker {
+.speaker,
+.translation,
+.study-notes {
   color: var(--muted);
+}
+
+.sentence-line {
+  font-size: 18px;
+}
+
+.terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terms li {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
   font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
+}
+
+.full-transcript li {
+  display: grid;
+  gap: 4px;
 }
 
 .full-replay-action {

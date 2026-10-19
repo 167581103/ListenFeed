@@ -11,9 +11,15 @@ export type ListeningOption = {
   label: string;
 };
 
+export type LearningMode = "quiz" | "sentence-listening";
+
 export type TranscriptLine = {
   speaker: string;
   line: string;
+  /** Learner's-language meaning of this sentence. */
+  translation?: string;
+  /** Proper nouns or expressions to notice in this sentence. */
+  terms?: string[];
   /** Sentence start in the source audio. Required for precise listening mode. */
   startMs?: number;
   /** Sentence end in the source audio. Required for precise listening mode. */
@@ -31,6 +37,8 @@ export type FeedItemFeatures = {
   accent?: string;
   /** CEFR level, e.g. "A2", "B1". */
   level?: string;
+  /** Source-framework level that does not fit CEFR, e.g. "N5". */
+  proficiency?: string;
   topic?: string;
   scenario?: string;
   format?: "dialogue" | "monologue";
@@ -51,7 +59,11 @@ export type PublishedItem = {
   seq: number;
   /** Content version, so the client can detect edited items. */
   version: number;
+  /** Absent on older snapshots, which are quiz items. */
+  learningMode?: LearningMode;
   question: string;
+  /** Study notes for sentence listening. Quiz explanations stay off the snapshot. */
+  notes?: string;
   options: ListeningOption[];
   answerId: string;
   transcript: TranscriptLine[];

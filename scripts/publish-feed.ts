@@ -69,6 +69,9 @@ type Row = {
   speech_rate: number | null;
   quality_score: string | null;
   freshness_score: string | null;
+  learning_mode: PublishedItem["learningMode"];
+  proficiency: string | null;
+  explanation: string | null;
 };
 
 /**
@@ -82,12 +85,15 @@ async function loadPublishedItems(): Promise<PublishedItem[]> {
             fi.question, aa.content_hash, aa.duration_ms,
             fi.level, fi.language, fi.locale, fi.accent, fi.topic, fi.scenario, fi.format,
             fi.speech_rate, fi.quality_score, fi.freshness_score,
+            fi.learning_mode, fi.proficiency, fi.explanation,
             (SELECT json_agg(json_build_object('id', o.option_key, 'label', o.label) ORDER BY o.position)
                FROM feed_options o WHERE o.feed_item_id = fi.id) AS options,
             (SELECT o.option_key FROM feed_options o WHERE o.feed_item_id = fi.id AND o.is_correct LIMIT 1) AS answer_id,
             (SELECT json_agg(json_build_object(
                 'speaker', t.speaker_label,
                 'line', t.line,
+                'translation', t.translation,
+                'terms', t.terms,
                 'startMs', t.start_ms,
                 'endMs', t.end_ms
               ) ORDER BY t.position)
@@ -103,6 +109,8 @@ async function loadPublishedItems(): Promise<PublishedItem[]> {
     seq: Number(r.seq),
     version: r.version,
     question: r.question,
+    learningMode: r.learning_mode ?? "quiz",
+    notes: r.learning_mode === "sentence-listening" ? (r.explanation || undefined) : undefined,
     options: r.options ?? [],
     answerId: r.answer_id ?? "",
     transcript: r.transcript ?? [],
@@ -113,6 +121,7 @@ async function loadPublishedItems(): Promise<PublishedItem[]> {
     },
     features: {
       level: r.level ?? undefined,
+      proficiency: r.proficiency ?? undefined,
       language: r.language ?? undefined,
       locale: r.locale ?? undefined,
       accent: r.accent ?? undefined,
